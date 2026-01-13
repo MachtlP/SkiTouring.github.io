@@ -15,61 +15,64 @@
   <style>
     #map { height: 420px; width: 100%; border-radius: 12px; }
 
-    .elev-wrap {
+    .elev-wrap{
       margin-top: 10px;
       border-radius: 12px;
-      border: 1px solid rgba(0,0,0,0.10);
+      border: 2px solid rgba(0,0,0,0.25); /* stronger border */
       padding: 10px;
       position: relative;
+      background: #fff;
     }
-    .elev-head {
-      display: flex;
-      gap: 10px;
-      align-items: baseline;
-      justify-content: space-between;
-      margin-bottom: 8px;
+    .elev-head{
+      display:flex;
+      gap:10px;
+      align-items:baseline;
+      justify-content:space-between;
+      margin-bottom:8px;
     }
-    .elev-title { font-weight: 600; }
-    .elev-stats { opacity: 0.75; font-size: 0.95rem; }
+    .elev-title{ font-weight: 700; }
+    .elev-stats{ opacity: 0.95; font-size: 0.95rem; }
 
-    /* Ensure the canvas gets real height in all layouts */
-    #elevCanvas {
-      width: 100%;
-      height: 180px;
-      display: block;
-      border-radius: 10px;
-      background: rgba(0,0,0,0.02);
+    /* HIGH CONTRAST CANVAS */
+    #elevCanvas{
+      width:100%;
+      height:190px;
+      display:block;
+      border-radius:10px;
+      background:#fff;                 /* solid white */
+      border:2px solid rgba(0,0,0,0.25); /* visible frame */
     }
 
-    .elev-note {
+    .elev-note{
       margin-top: 6px;
-      opacity: 0.7;
-      font-size: 0.9rem;
-      display: none;
-    }
-
-    .elev-tooltip {
-      position: absolute;
-      pointer-events: none;
-      padding: 6px 8px;
-      border-radius: 10px;
-      border: 1px solid rgba(0,0,0,0.15);
-      background: rgba(255,255,255,0.95);
-      font-size: 0.9rem;
-      transform: translate(10px, -10px);
-      display: none;
-      white-space: nowrap;
-      z-index: 10;
-    }
-
-    .map-error {
-      margin-top: 10px;
-      padding: 10px 12px;
-      border: 1px solid rgba(0,0,0,0.15);
-      border-radius: 10px;
+      opacity: 0.85;
       font-size: 0.95rem;
-      background: rgba(255, 235, 235, 0.9);
       display: none;
+    }
+
+    .elev-tooltip{
+      position:absolute;
+      pointer-events:none;
+      padding:6px 8px;
+      border-radius:10px;
+      border:2px solid rgba(0,0,0,0.25);
+      background: rgba(255,255,255,0.98);
+      font-size: 0.95rem;
+      transform: translate(10px, -10px);
+      display:none;
+      white-space:nowrap;
+      z-index:10;
+      color:#111;
+    }
+
+    .map-error{
+      margin-top:10px;
+      padding:10px 12px;
+      border:2px solid rgba(0,0,0,0.25);
+      border-radius:10px;
+      font-size:0.95rem;
+      background: rgba(255, 235, 235, 0.95);
+      display:none;
     }
     .map-error code { font-size: 0.9em; }
   </style>
@@ -172,12 +175,10 @@
 
     const map = L.map("map", { zoomControl: true });
 
-    // --- Base layers ---
     const openTopo = L.tileLayer(
       "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
       { maxZoom: 17, attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap" }
     );
-
     const openStreet = L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
       { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
@@ -185,19 +186,13 @@
 
     openTopo.addTo(map);
     L.control.layers({ "Topo": openTopo, "Street": openStreet }, null, { collapsed: true }).addTo(map);
-
-    // Fallback view (used only if loading fails)
     map.setView([50.0, -123.0], 7);
 
     function htmlEscape(s) {
       return String(s)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
     }
-
     function showError(msg, obj) {
       console.error(msg, obj || "");
       const el = document.getElementById("mapError");
@@ -209,51 +204,37 @@
 
     function extractGeometry(gj) {
       if (!gj || typeof gj !== "object") return null;
-
       if (gj.type === "Feature" && gj.geometry) return gj.geometry;
-
       if (gj.type === "FeatureCollection" && Array.isArray(gj.features) && gj.features.length) {
         const f0 = gj.features[0];
         if (f0 && f0.geometry) return f0.geometry;
       }
-
       if (gj.geometry && gj.geometry.coordinates) return gj.geometry;
-
       if ((gj.type === "LineString" || gj.type === "MultiLineString") && gj.coordinates) return gj;
-
       if (gj.coordinates) return { type: "LineString", coordinates: gj.coordinates };
-
       return null;
     }
 
-    // Flatten coords into array of points: [[lon,lat,ele?], ...]
     function flattenToPoints(coords) {
-      if (Array.isArray(coords) && coords.length && Array.isArray(coords[0]) && typeof coords[0][0] === "number") {
-        return coords;
-      }
+      if (Array.isArray(coords) && coords.length && Array.isArray(coords[0]) && typeof coords[0][0] === "number") return coords;
       if (Array.isArray(coords)) return coords.flatMap(flattenToPoints);
       return [];
     }
 
-    // Haversine distance (meters)
     function haversineMeters(lat1, lon1, lat2, lon2) {
-      const R = 6371000;
-      const toRad = d => d * Math.PI / 180;
-      const dLat = toRad(lat2 - lat1);
-      const dLon = toRad(lon2 - lon1);
-      const a = Math.sin(dLat/2)**2 +
-                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+      const R = 6371000, toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
       return 2 * R * Math.asin(Math.sqrt(a));
     }
 
     function setupElevationProfile(points, latlngs) {
-      const elevWrap = document.getElementById("elevWrap");
       const note = document.getElementById("elevNote");
       const statsEl = document.getElementById("elevStats");
       const canvas = document.getElementById("elevCanvas");
       const tooltip = document.getElementById("elevTooltip");
+      const elevWrap = document.getElementById("elevWrap");
 
-      // Elevation from 3rd coord
       const elev = points.map(p => (p.length >= 3 && isFinite(p[2]) ? Number(p[2]) : null));
       const hasElev = elev.some(v => v !== null);
 
@@ -263,14 +244,12 @@
         return;
       }
 
-      // Cumulative distance (km)
       const distKm = new Array(latlngs.length).fill(0);
       for (let i = 1; i < latlngs.length; i++) {
         const d = haversineMeters(latlngs[i-1][0], latlngs[i-1][1], latlngs[i][0], latlngs[i][1]);
         distKm[i] = distKm[i-1] + d / 1000;
       }
 
-      // Stats
       const elevVals = elev.filter(v => v !== null);
       const minE = Math.min(...elevVals);
       const maxE = Math.max(...elevVals);
@@ -279,12 +258,11 @@
       for (let i = 1; i < elev.length; i++) {
         if (elev[i] === null || elev[i-1] === null) continue;
         const de = elev[i] - elev[i-1];
-        if (de > 0) gain += de;
-        else loss += -de;
+        if (de > 0) gain += de; else loss += -de;
       }
 
       statsEl.textContent =
-        `${distKm[distKm.length-1].toFixed(1)} km • ↑ ${Math.round(gain)} m • ↓ ${Math.round(loss)} m • ${Math.round(minE)}–${Math.round(maxE)} m • profile loaded ✅`;
+        `${distKm[distKm.length-1].toFixed(1)} km • ↑ ${Math.round(gain)} m • ↓ ${Math.round(loss)} m • ${Math.round(minE)}–${Math.round(maxE)} m`;
 
       function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
@@ -298,36 +276,35 @@
         const { dpr, W, H } = resizeCanvas();
         const ctx = canvas.getContext("2d");
 
-        // draw in CSS pixels
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // padding (CSS px)
-        const padL = 46, padR = 12, padT = 12, padB = 26;
+        const padL = 52, padR = 12, padT = 12, padB = 28;
         const plotW = W - padL - padR;
         const plotH = H - padT - padB;
 
-        ctx.clearRect(0, 0, W, H);
+        // SOLID WHITE BG
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, W, H);
 
-        // subtle grid (so you SEE it's drawn)
-        ctx.globalAlpha = 0.12;
+        // GRID (VISIBLE)
+        ctx.strokeStyle = "rgba(0,0,0,0.25)";
         ctx.lineWidth = 1;
-        for (let i = 0; i <= 4; i++) {
-          const y = padT + (i/4) * plotH;
+        for (let i = 0; i <= 5; i++) {
+          const y = padT + (i/5) * plotH;
           ctx.beginPath();
           ctx.moveTo(padL, y);
           ctx.lineTo(padL + plotW, y);
           ctx.stroke();
         }
-        ctx.globalAlpha = 1;
 
-        // labels
-        ctx.globalAlpha = 0.7;
+        // LABELS (DARK)
+        ctx.fillStyle = "#111";
         ctx.font = "12px system-ui, sans-serif";
         ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
         ctx.fillText(`${Math.round(minE)} m`, 8, padT + plotH);
-        ctx.fillText("0 km", padL, H - 6);
-        ctx.fillText(`${distKm[distKm.length-1].toFixed(1)} km`, padL + plotW - 44, H - 6);
-        ctx.globalAlpha = 1;
+        ctx.fillText("0 km", padL, H - 8);
+        ctx.fillText(`${distKm[distKm.length-1].toFixed(1)} km`, padL + plotW - 48, H - 8);
 
         const totalKm = distKm[distKm.length-1] || 1;
         const xFor = i => padL + (distKm[i] / totalKm) * plotW;
@@ -336,7 +313,7 @@
           return padT + (1 - t) * plotH;
         };
 
-        // build path
+        // PROFILE PATH
         let firstIdx = -1;
         ctx.beginPath();
         for (let i = 0; i < elev.length; i++) {
@@ -348,55 +325,56 @@
           else ctx.lineTo(x, y);
         }
 
-        // --- STYLE (high visibility) ---
-        ctx.strokeStyle = "#111";     // dark line
-        ctx.fillStyle   = "#111";     // fill under the line
-        ctx.lineWidth   = 4;          // thicker line
-        ctx.lineJoin    = "round";
-        ctx.lineCap     = "round";
+        // STRONG FILL
+        ctx.lineJoin = "round";
+        ctx.lineCap  = "round";
 
-        // stroke
-        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 5;
+
+        // Keep a copy of path for fill
         ctx.stroke();
 
-          // fill under the line (stronger)
-        ctx.globalAlpha = 0.28;
+        ctx.globalAlpha = 0.55;      // MUCH stronger fill
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.lineTo(padL + plotW, padT + plotH);
         ctx.lineTo(padL, padT + plotH);
         ctx.closePath();
         ctx.fill();
         ctx.globalAlpha = 1;
 
-
-        // cursor + dot
+        // CURSOR
         if (cursorIdx !== null) {
           const e = elev[cursorIdx];
           if (e !== null) {
             const x = xFor(cursorIdx);
             const y = yForE(e);
 
-            ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 3;
             ctx.beginPath();
             ctx.moveTo(x, padT);
             ctx.lineTo(x, padT + plotH);
-            ctx.lineWidth = 1;
             ctx.stroke();
-            ctx.globalAlpha = 1;
 
+            ctx.fillStyle = "#000";
             ctx.beginPath();
-            ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
             ctx.fill();
           }
         }
       }
 
-      // marker synced to profile
-      const hoverMarker = L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 }).addTo(map);
+      // marker synced to profile (also high visibility)
+      const hoverMarker = L.circleMarker(latlngs[0], {
+        radius: 7, opacity: 1, fillOpacity: 1,
+        color: "#000", fillColor: "#000", weight: 2
+      }).addTo(map);
 
       function nearestIndexFromX(clientX) {
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
-        const padL = 46, padR = 12;
+        const padL = 52, padR = 12;
         const plotW = rect.width - padL - padR;
         const t = Math.max(0, Math.min(1, (x - padL) / (plotW || 1)));
         const targetKm = t * (distKm[distKm.length-1] || 0);
@@ -411,13 +389,10 @@
       }
 
       function updateTooltip(idx, clientX, clientY) {
-        const e = elev[idx];
-        const d = distKm[idx];
+        const e = elev[idx], d = distKm[idx];
         if (e === null) return;
-
         tooltip.style.display = "block";
         tooltip.innerHTML = `${d.toFixed(2)} km • ${Math.round(e)} m`;
-
         const wrapRect = elevWrap.getBoundingClientRect();
         tooltip.style.left = `${clientX - wrapRect.left}px`;
         tooltip.style.top  = `${clientY - wrapRect.top}px`;
