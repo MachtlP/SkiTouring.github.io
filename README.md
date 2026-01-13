@@ -1,2 +1,2 @@
 # SkiTouring.github.io
-some skir tours
+some ski tours
