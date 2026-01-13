@@ -209,7 +209,10 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    setTimeout(initMap, 300);
+    setTimeout(() => {
+  initMap();
+}, 300);
+
     wireHeroControls();
     wireFilterControls();
     loadGeoJSON();

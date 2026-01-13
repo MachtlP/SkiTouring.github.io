@@ -25,27 +25,20 @@ body {
    GUIDE PAGE — SLIDE IN
    ========================= */
 
+/* GUIDE PAGE — SAFE ENTER (Leaflet-friendly) */
 body{
-  animation: pageEnter 900ms cubic-bezier(.18,.88,.25,1) both;
+  animation: pageEnter 700ms ease both;
 }
 
 @keyframes pageEnter{
-  0%{
-    opacity: 0;
-    transform: translateX(60px);
-  }
-  100%{
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
-/* accessibility */
 @media (prefers-reduced-motion: reduce){
-  body{
-    animation: none !important;
-  }
+  body{ animation: none !important; }
 }
+
 
 body::before{
   content:"";
@@ -65,4 +58,23 @@ body::before{
   0%{ opacity: 0; }
   30%{ opacity: 1; }
   100%{ opacity: 0; }
+}
+
+/* “Slide-in” illusion without transforming the DOM (safe for Leaflet) */
+body::after{
+  content:"";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: var(--bg);
+  animation: curtainSlide 900ms cubic-bezier(.18,.88,.25,1) both;
+}
+
+@keyframes curtainSlide{
+  0%   { transform: translateX(0); opacity: 1; }
+  100% { transform: translateX(-100%); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  body::after{ animation: none !important; display:none; }
 }
