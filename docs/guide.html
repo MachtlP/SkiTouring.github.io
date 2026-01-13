@@ -32,7 +32,7 @@
         <span>Winter 2025/26</span>
       </div>
 
-      <h2 class="hero-title">Touring Guide</h2>
+      <h2 class="hero-title">Ski Touring Guide</h2>
       <p class="hero-sub">
             This map-linked ski touring guide brings together GPX tracks, photos, and practical notes in one place.
             I created it after finding it surprisingly difficult to locate concise, route-specific GPX information without endlessly scrolling through scattered trip reports.
@@ -52,7 +52,7 @@
         <button class="toc-chip" type="button" data-q="Whistler">Whistler</button>
         <button class="toc-chip" type="button" data-q="Sea to Sky">Sea to Sky</button>
         <button class="toc-chip" type="button" data-q="Coast">Coast</button>
-        <span class="toc-hint">Tip: click a region to filter</span>
+        
       </div>
     </div>
   </section>
@@ -61,24 +61,21 @@
   <header>
     <div class="topbar">
       <div class="brand">
-        <h1>Touring Guide</h1>
+        <h1>Ski Touring Guide</h1>
         <p>Scan the book • click the map • open tours in a new tab</p>
       </div>
 
       <div class="controls">
         <input id="q" placeholder="Search title / region…" />
-        <select id="difficulty">
-          <option value="">All difficulties</option>
-          <option value="easy">Easy</option>
-          <option value="moderate">Moderate</option>
-          <option value="hard">Hard</option>
+        <select id="province">
+         <option value="">All provinces</option>
         </select>
-        <select id="activity">
-          <option value="">All activities</option>
-          <option value="ski_tour">Ski tour</option>
-          <option value="snowshoe">Snowshoe</option>
-          <option value="hike">Hike</option>
-        </select>
+
+      <select id="region">
+        <option value="">All regions</option>
+      </select>
+
+        
         <button id="fit" type="button">Fit map to results</button>
       </div>
     </div>

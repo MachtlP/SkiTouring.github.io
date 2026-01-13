@@ -22,18 +22,25 @@
   }
 
   function passesFilters(p) {
-    const q = norm($("q")?.value);
-    const diff = norm($("difficulty")?.value);
-    const act = norm($("activity")?.value);
+  const q = norm($("q")?.value);
+  const prov = norm($("province")?.value);
+  const reg = norm($("region")?.value);
 
-    const hay =
-      `${norm(p.title)} ${norm(p.region)} ${norm(p.subtitle)} ${norm(p.activity)} ${norm(p.difficulty)}`;
+  // Include province/region in search too
+  const hay =
+    `${norm(p.title)} ${norm(p.region)} ${norm(p.province)} ${norm(p.subtitle)} ${norm(p.activity)} ${norm(p.difficulty)}`;
 
-    if (q && !hay.includes(q)) return false;
-    if (diff && norm(p.difficulty) !== diff) return false;
-    if (act && norm(p.activity) !== act) return false;
-    return true;
-  }
+  if (q && !hay.includes(q)) return false;
+  if (diff && norm(p.difficulty) !== diff) return false;
+  if (act && norm(p.activity) !== act) return false;
+
+  // strict matching for dropdowns
+  if (prov && norm(p.province) !== prov) return false;
+  if (reg && norm(p.region) !== reg) return false;
+
+  return true;
+}
+
 
   function renderCards(features) {
     const grid = $("grid");
@@ -130,6 +137,37 @@
     }).addTo(map);
   }
 
+  function uniqSorted(arr) {
+  return Array.from(new Set(arr.filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
+
+function populateSelect(id, values, allLabel) {
+  const el = $(id);
+  if (!el) return;
+
+  // preserve current selection if possible
+  const current = el.value;
+
+  el.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = allLabel;
+  el.appendChild(optAll);
+
+  for (const v of values) {
+    const opt = document.createElement("option");
+    opt.value = v;          // keep raw value
+    opt.textContent = v;    // display label
+    el.appendChild(opt);
+  }
+
+  // restore selection if still valid
+  if (values.includes(current)) el.value = current;
+}
+
+
   function applyFiltersAndRender() {
     const filtered = allFeatures.filter((f) => passesFilters(f.properties || {}));
     renderCards(filtered);
@@ -158,8 +196,9 @@
 
   function wireFilterControls() {
     $("q")?.addEventListener("input", applyFiltersAndRender);
-    $("difficulty")?.addEventListener("change", applyFiltersAndRender);
-    $("activity")?.addEventListener("change", applyFiltersAndRender);
+    $("province")?.addEventListener("change", applyFiltersAndRender);
+    $("region")?.addEventListener("change", applyFiltersAndRender);
+
 
     $("fit")?.addEventListener("click", () => {
       if (!geoLayer) return;
@@ -181,6 +220,14 @@
       }
       const gj = await res.json();
       allFeatures = (gj.features || []).filter(Boolean);
+      // Build filter option lists from the data
+      const props = allFeatures.map(f => f.properties || {});
+      const provinces    = uniqSorted(props.map(p => p.province).map(String));
+      const regions      = uniqSorted(props.map(p => p.region).map(String));
+
+
+      populateSelect("province", provinces, "All provinces");
+      populateSelect("region", regions, "All regions");
 
       applyFiltersAndRender();
 

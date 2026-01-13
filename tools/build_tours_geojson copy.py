@@ -82,12 +82,6 @@ def main():
     features = []
     gpx_files = sorted(TRACKS_DIR.glob("*.gpx"))
 
-    print("REPO_ROOT  =", REPO_ROOT)
-    print("TRACKS_DIR =", TRACKS_DIR)
-    print("Exists?    =", TRACKS_DIR.is_dir())
-
-    print("Contents   =", os.listdir(TRACKS_DIR)[:20])
-
     if not gpx_files:
         raise SystemExit(f"No GPX files found in {TRACKS_DIR}")
 
