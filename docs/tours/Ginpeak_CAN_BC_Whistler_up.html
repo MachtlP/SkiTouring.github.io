@@ -14,6 +14,15 @@
 
   <style>
     #map { height: 420px; width: 100%; border-radius: 12px; }
+    .map-error {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background: rgba(255, 235, 235, 0.9);
+    }
+    .map-error code { font-size: 0.9em; }
   </style>
 </head>
 
@@ -32,6 +41,7 @@
 
     <section class="tour-map">
       <div id="map"></div>
+      <div id="mapError" class="map-error" style="display:none;"></div>
     </section>
 
     <section class="tour-content">
@@ -104,95 +114,125 @@
     // --- Base layers ---
     const openTopo = L.tileLayer(
       "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-      {
-        maxZoom: 17,
-        attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap"
-      }
+      { maxZoom: 17, attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap" }
     );
 
     const openStreet = L.tileLayer(
       "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        maxZoom: 19,
-        attribution: "&copy; OpenStreetMap contributors"
-      }
+      { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
     );
 
-    // Default basemap
     openTopo.addTo(map);
 
-    // Layer control
     L.control.layers(
       { "Topo": openTopo, "Street": openStreet },
       null,
       { collapsed: true }
     ).addTo(map);
 
-    // Fallback view (only used if loading fails)
+    // Fallback view
     map.setView([50.0, -123.0], 7);
 
-    function pickFeature(gj) {
+    function showError(msg, obj) {
+      console.error(msg, obj || "");
+      const el = document.getElementById("mapError");
+      if (!el) return;
+      el.style.display = "block";
+      const extra = obj ? `<br><code>${htmlEscape(JSON.stringify(obj).slice(0, 400))}${JSON.stringify(obj).length > 400 ? "…" : ""}</code>` : "";
+      el.innerHTML = `<strong>Map load error:</strong> ${htmlEscape(msg)}${extra}`;
+    }
+
+    function htmlEscape(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    // Try to find a geometry object in many common shapes
+    function extractGeometry(gj) {
       if (!gj || typeof gj !== "object") return null;
-      if (gj.type === "Feature") return gj;
+
+      // Feature
+      if (gj.type === "Feature" && gj.geometry) return gj.geometry;
+
+      // FeatureCollection
       if (gj.type === "FeatureCollection" && Array.isArray(gj.features) && gj.features.length) {
-        return gj.features[0];
+        const f0 = gj.features[0];
+        if (f0 && f0.geometry) return f0.geometry;
       }
+
+      // Sometimes people store { geometry: {...} } without "type"
+      if (gj.geometry && gj.geometry.coordinates) return gj.geometry;
+
+      // Raw geometry object
+      if ((gj.type === "LineString" || gj.type === "MultiLineString") && gj.coordinates) return gj;
+
+      // Last resort: coordinates at top-level
+      if (gj.coordinates) {
+        return { type: "LineString", coordinates: gj.coordinates };
+      }
+
       return null;
     }
 
-    function coordsToLatLngs(geometry) {
-      // Supports LineString and MultiLineString
-      const t = geometry?.type;
-      const c = geometry?.coordinates;
-
-      if (!t || !c) return [];
-
-      if (t === "LineString") {
-        return c
-          .filter(p => Array.isArray(p) && p.length >= 2)
-          .map(p => [Number(p[1]), Number(p[0])]); // [lat, lon]
+    // Flatten coords into an array of points: [[lon,lat,ele?], ...]
+    function flattenToPoints(coords) {
+      // If it's already points
+      if (Array.isArray(coords) && coords.length && Array.isArray(coords[0]) && typeof coords[0][0] === "number") {
+        return coords;
       }
-
-      if (t === "MultiLineString") {
-        // flatten all segments into one line (good enough for tracks)
-        const flat = c.flat();
-        return flat
-          .filter(p => Array.isArray(p) && p.length >= 2)
-          .map(p => [Number(p[1]), Number(p[0])]);
+      // If it's nested (MultiLineString or worse)
+      if (Array.isArray(coords)) {
+        return coords.flatMap(flattenToPoints);
       }
-
-      // If you ever store Polygon etc., add handling here
       return [];
     }
 
     fetch(detailUrl)
       .then(r => {
-        if (!r.ok) throw new Error(`Failed to load GeoJSON: ${detailUrl} (${r.status})`);
+        if (!r.ok) throw new Error(`Failed to load GeoJSON (${r.status})`);
         return r.json();
       })
       .then(gj => {
-        const feature = pickFeature(gj);
-        if (!feature || !feature.geometry) {
-          throw new Error("Detail GeoJSON must be a Feature or FeatureCollection with geometry");
+        const geom = extractGeometry(gj);
+        if (!geom || !geom.coordinates) {
+          showError("Could not find geometry.coordinates in GeoJSON", { type: gj?.type, keys: Object.keys(gj || {}) });
+          return;
         }
 
-        const latlngs = coordsToLatLngs(feature.geometry);
-        if (latlngs.length < 2) {
-          throw new Error(`Not enough coordinates to draw a track (got ${latlngs.length})`);
+        const points = flattenToPoints(geom.coordinates)
+          .filter(p => Array.isArray(p) && p.length >= 2);
+
+        if (points.length < 2) {
+          showError(`Not enough coordinate points to draw (got ${points.length})`, { geomType: geom.type });
+          return;
         }
 
-        const line = L.polyline(latlngs, { weight: 4, opacity: 0.9 }).addTo(map);
+        // Convert to Leaflet latlngs
+        const latlngs = points.map(p => [Number(p[1]), Number(p[0])]);
+
+        // Sanity: if everything is NaN, bail
+        if (!isFinite(latlngs[0][0]) || !isFinite(latlngs[0][1])) {
+          showError("Coordinates are not numeric (NaN). Check GeoJSON coordinate format.", { sample: points[0] });
+          return;
+        }
+
+        const line = L.polyline(latlngs, { weight: 4, opacity: 0.95 }).addTo(map);
         map.fitBounds(line.getBounds().pad(0.18));
 
-        // Start/end markers
         L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 })
           .addTo(map).bindTooltip("Start");
 
         L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, opacity: 1, fillOpacity: 0.9 })
           .addTo(map).bindTooltip("End");
+
+        console.log("Track drawn:", { slug, url: detailUrl, geomType: geom.type, points: latlngs.length });
       })
       .catch(err => {
-        console.error(err);
+        showError(err.message || String(err));
       });
   </script>
 </body>
