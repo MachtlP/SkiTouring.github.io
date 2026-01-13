@@ -1,7 +1,8 @@
 // docs/js/main.js
 (() => {
   // Adjust if needed:
-  const DATA_URL = "./data/tours.geojson";
+  const DATA_URL = new URL("./data/tours.geojson", document.baseURI).href;
+
 
   let map;
   let allFeatures = [];
@@ -21,25 +22,22 @@
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  function passesFilters(p) {
+ function passesFilters(p) {
   const q = norm($("q")?.value);
   const prov = norm($("province")?.value);
   const reg = norm($("region")?.value);
 
-  // Include province/region in search too
   const hay =
-    `${norm(p.title)} ${norm(p.region)} ${norm(p.province)} ${norm(p.subtitle)} ${norm(p.activity)} ${norm(p.difficulty)}`;
+    `${norm(p.title)} ${norm(p.region)} ${norm(p.province)} ${norm(p.subtitle)} ${norm(p.country)}`;
 
   if (q && !hay.includes(q)) return false;
-  if (diff && norm(p.difficulty) !== diff) return false;
-  if (act && norm(p.activity) !== act) return false;
 
-  // strict matching for dropdowns
   if (prov && norm(p.province) !== prov) return false;
   if (reg && norm(p.region) !== reg) return false;
 
   return true;
 }
+
 
 
   function renderCards(features) {
