@@ -5,16 +5,13 @@
   <title>{{TITLE}} • Touring Guide</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Base styles (already in your project) -->
   <link rel="stylesheet" href="../css/base.css" />
   <link rel="stylesheet" href="../css/book.css" />
   <link rel="stylesheet" href="../css/map.css" />
   <link rel="stylesheet" href="../css/tour.css" />
 
-  <!-- Leaflet -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-  <!-- Safety net: ensure map has a height even if CSS doesn't apply -->
   <style>
     #map { height: 420px; width: 100%; border-radius: 12px; }
   </style>
@@ -23,74 +20,72 @@
 <body>
   <main class="tour-wrap">
 
-    <!-- Top navigation -->
     <nav class="tour-nav">
       <a href="../guide.html">← Back to guide</a>
       <a href="{{GPX_URL}}" download class="btn">Download GPX</a>
     </nav>
 
-    <!-- Header -->
     <header class="tour-header">
       <h1 class="tour-title">{{TITLE}}</h1>
       <p class="tour-sub">{{PROVINCE}} • {{REGION}}</p>
     </header>
 
-    <!-- Map -->
     <section class="tour-map">
       <div id="map"></div>
     </section>
 
-    <!-- Content -->
     <section class="tour-content">
       {{CONTENT_HTML}}
     </section>
 
   </main>
 
-  <!-- Leaflet -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <!-- Map boot: load per-tour detail GeoJSON (source of truth) -->
   <script>
-    // Injected by your generator (filename stem / slug)
     const slug = "{{SLUG}}";
-
-    // Tour pages live in: docs/tours/<slug>.html
-    // Detail GeoJSON lives in: docs/data/tours_detail/<slug>.geojson
     const detailUrl = `../data/tours_detail/${slug}.geojson`;
 
     const map = L.map("map", { zoomControl: true });
 
     // --- Base layers ---
-const openTopo = L.tileLayer(
-  "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-  {
-    maxZoom: 17,
-    attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap"
-  }
-);
+    const openTopo = L.tileLayer(
+      "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 17,
+        attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap"
+      }
+    );
 
-const openStreet = L.tileLayer(
-  "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-  {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors"
-  }
-);
+    const openStreet = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap contributors"
+      }
+    );
 
-// --- Default basemap ---
-openTopo.addTo(map);
+    // Default basemap
+    openTopo.addTo(map);
 
-// --- Layer control (top-right button) ---
-L.control.layers(
-  { "Topo": openTopo, "Street": openStreet },
-  null,
-  { collapsed: true }
-).addTo(map);
+    // Layer control
+    L.control.layers(
+      { "Topo": openTopo, "Street": openStreet },
+      null,
+      { collapsed: true }
+    ).addTo(map);
 
-
-    // Default fallback view (if fetch fails)
+    // Fallback view (only used if loading fails)
     map.setView([50.0, -123.0], 7);
+
+    function pickFeature(gj) {
+      if (!gj || typeof gj !== "object") return null;
+      if (gj.type === "Feature") return gj;
+      if (gj.type === "FeatureCollection" && Array.isArray(gj.features) && gj.features.length) {
+        return gj.features[0];
+      }
+      return null;
+    }
 
     fetch(detailUrl)
       .then(r => {
@@ -98,28 +93,26 @@ L.control.layers(
         return r.json();
       })
       .then(gj => {
-        if (!gj || !gj.geometry || !Array.isArray(gj.geometry.coordinates)) {
-          throw new Error("Detail GeoJSON missing geometry.coordinates");
+        const feature = pickFeature(gj);
+        if (!feature || !feature.geometry || !Array.isArray(feature.geometry.coordinates)) {
+          throw new Error("Detail GeoJSON missing geometry.coordinates (Feature/FeatureCollection expected)");
         }
 
-        // GeoJSON coords are [lon, lat, ele?]
-        const coords = gj.geometry.coordinates;
+        const coords = feature.geometry.coordinates; // [[lon,lat,ele?], ...]
 
-        // Leaflet wants [lat, lon]
-        const latlngs = coords.map(c => [c[1], c[0]]);
+        const latlngs = coords
+          .filter(c => Array.isArray(c) && c.length >= 2)
+          .map(c => [Number(c[1]), Number(c[0])]); // [lat, lon]
 
         if (latlngs.length < 2) {
           throw new Error("Not enough coordinates to draw a track");
         }
 
-        const line = L.polyline(latlngs, {
-          weight: 4,
-          opacity: 0.9
-        }).addTo(map);
+        console.log("Loaded track:", slug, "points:", latlngs.length, "url:", detailUrl);
 
+        const line = L.polyline(latlngs, { weight: 4, opacity: 0.9 }).addTo(map);
         map.fitBounds(line.getBounds().pad(0.18));
 
-        // Optional: start/end markers
         L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 })
           .addTo(map).bindTooltip("Start");
 
@@ -128,7 +121,6 @@ L.control.layers(
       })
       .catch(err => {
         console.error(err);
-        // Keep fallback view
       });
   </script>
 </body>
