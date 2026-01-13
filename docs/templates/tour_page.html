@@ -20,6 +20,7 @@
       border-radius: 12px;
       border: 1px solid rgba(0,0,0,0.10);
       padding: 10px;
+      position: relative;
     }
     .elev-head {
       display: flex;
@@ -30,19 +31,23 @@
     }
     .elev-title { font-weight: 600; }
     .elev-stats { opacity: 0.75; font-size: 0.95rem; }
+
+    /* Ensure the canvas gets real height in all layouts */
     #elevCanvas {
       width: 100%;
-      height: 160px;         /* CSS height */
+      height: 180px;
       display: block;
       border-radius: 10px;
       background: rgba(0,0,0,0.02);
     }
+
     .elev-note {
       margin-top: 6px;
       opacity: 0.7;
       font-size: 0.9rem;
       display: none;
     }
+
     .elev-tooltip {
       position: absolute;
       pointer-events: none;
@@ -54,6 +59,7 @@
       transform: translate(10px, -10px);
       display: none;
       white-space: nowrap;
+      z-index: 10;
     }
 
     .map-error {
@@ -86,10 +92,10 @@
       <div id="map"></div>
 
       <!-- Elevation profile -->
-      <div class="elev-wrap" id="elevWrap" style="position:relative;">
+      <div class="elev-wrap" id="elevWrap">
         <div class="elev-head">
           <div class="elev-title">Elevation profile</div>
-          <div class="elev-stats" id="elevStats"></div>
+          <div class="elev-stats" id="elevStats">loading…</div>
         </div>
         <canvas id="elevCanvas"></canvas>
         <div class="elev-note" id="elevNote">No elevation data found in this GeoJSON.</div>
@@ -144,7 +150,7 @@
       const el = document.getElementById("mapError");
       if (!el) return;
       el.style.display = "block";
-      const extra = obj ? `<br><code>${htmlEscape(JSON.stringify(obj).slice(0, 500))}${JSON.stringify(obj).length > 500 ? "…" : ""}</code>` : "";
+      const extra = obj ? `<br><code>${htmlEscape(JSON.stringify(obj).slice(0, 600))}${JSON.stringify(obj).length > 600 ? "…" : ""}</code>` : "";
       el.innerHTML = `<strong>Map load error:</strong> ${htmlEscape(msg)}${extra}`;
     }
 
@@ -194,18 +200,17 @@
       const canvas = document.getElementById("elevCanvas");
       const tooltip = document.getElementById("elevTooltip");
 
-      // Pull elevation (meters) from 3rd coord
+      // Elevation from 3rd coord
       const elev = points.map(p => (p.length >= 3 && isFinite(p[2]) ? Number(p[2]) : null));
       const hasElev = elev.some(v => v !== null);
 
       if (!hasElev) {
         note.style.display = "block";
-        statsEl.textContent = "";
-        // still keep empty chart container for layout consistency
+        statsEl.textContent = "no elevation";
         return;
       }
 
-      // Compute cumulative distance (km)
+      // Cumulative distance (km)
       const distKm = new Array(latlngs.length).fill(0);
       for (let i = 1; i < latlngs.length; i++) {
         const d = haversineMeters(latlngs[i-1][0], latlngs[i-1][1], latlngs[i][0], latlngs[i][1]);
@@ -226,73 +231,89 @@
       }
 
       statsEl.textContent =
-        `${distKm[distKm.length-1].toFixed(1)} km • ↑ ${Math.round(gain)} m • ↓ ${Math.round(loss)} m • ${Math.round(minE)}–${Math.round(maxE)} m`;
+        `${distKm[distKm.length-1].toFixed(1)} km • ↑ ${Math.round(gain)} m • ↓ ${Math.round(loss)} m • ${Math.round(minE)}–${Math.round(maxE)} m • profile loaded ✅`;
 
-      // Canvas sizing (handle retina)
       function resizeCanvas() {
         const rect = canvas.getBoundingClientRect();
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = Math.floor(rect.width * dpr);
-        canvas.height = Math.floor(rect.height * dpr);
-        return { w: canvas.width, h: canvas.height, dpr };
+        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        return { dpr, W: rect.width, H: rect.height };
       }
 
       function draw(cursorIdx = null) {
-        const { w, h, dpr } = resizeCanvas();
+        const { dpr, W, H } = resizeCanvas();
         const ctx = canvas.getContext("2d");
-        ctx.setTransform(1,0,0,1,0,0);
-        ctx.scale(dpr, dpr);
 
-        const W = canvas.width / dpr;
-        const H = canvas.height / dpr;
+        // draw in CSS pixels
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        // padding
-        const padL = 40, padR = 10, padT = 10, padB = 24;
+        // padding (CSS px)
+        const padL = 46, padR = 12, padT = 12, padB = 26;
         const plotW = W - padL - padR;
         const plotH = H - padT - padB;
 
-        // background
-        ctx.clearRect(0,0,W,H);
+        ctx.clearRect(0, 0, W, H);
 
-        // axes labels (light)
-        ctx.globalAlpha = 0.65;
-        ctx.font = "12px system-ui, sans-serif";
-        ctx.fillText(`${Math.round(maxE)} m`, 6, padT + 10);
-        ctx.fillText(`${Math.round(minE)} m`, 6, padT + plotH);
-        ctx.fillText("0 km", padL, H - 6);
-        ctx.fillText(`${distKm[distKm.length-1].toFixed(1)} km`, padL + plotW - 40, H - 6);
+        // subtle grid (so you SEE it's drawn)
+        ctx.globalAlpha = 0.12;
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+          const y = padT + (i/4) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(padL + plotW, y);
+          ctx.stroke();
+        }
         ctx.globalAlpha = 1;
 
-        // map distance->x, elevation->y
+        // labels
+        ctx.globalAlpha = 0.7;
+        ctx.font = "12px system-ui, sans-serif";
+        ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
+        ctx.fillText(`${Math.round(minE)} m`, 8, padT + plotH);
+        ctx.fillText("0 km", padL, H - 6);
+        ctx.fillText(`${distKm[distKm.length-1].toFixed(1)} km`, padL + plotW - 44, H - 6);
+        ctx.globalAlpha = 1;
+
         const totalKm = distKm[distKm.length-1] || 1;
         const xFor = i => padL + (distKm[i] / totalKm) * plotW;
-
         const yForE = e => {
           const t = (e - minE) / ((maxE - minE) || 1);
           return padT + (1 - t) * plotH;
         };
 
-        // Draw profile line
+        // build path
+        let firstIdx = -1;
         ctx.beginPath();
-        let started = false;
         for (let i = 0; i < elev.length; i++) {
           if (elev[i] === null) continue;
+          if (firstIdx === -1) firstIdx = i;
           const x = xFor(i);
           const y = yForE(elev[i]);
-          if (!started) { ctx.moveTo(x, y); started = true; }
+          if (i === firstIdx) ctx.moveTo(x, y);
           else ctx.lineTo(x, y);
         }
-        ctx.lineWidth = 2;
+
+        // stroke
+        ctx.lineWidth = 3;
         ctx.stroke();
 
-        // Cursor
+        // fill (unmistakable)
+        ctx.globalAlpha = 0.10;
+        ctx.lineTo(padL + plotW, padT + plotH);
+        ctx.lineTo(padL, padT + plotH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // cursor + dot
         if (cursorIdx !== null) {
-          const x = xFor(cursorIdx);
           const e = elev[cursorIdx];
           if (e !== null) {
+            const x = xFor(cursorIdx);
             const y = yForE(e);
 
-            // vertical line
             ctx.globalAlpha = 0.35;
             ctx.beginPath();
             ctx.moveTo(x, padT);
@@ -301,26 +322,24 @@
             ctx.stroke();
             ctx.globalAlpha = 1;
 
-            // point
             ctx.beginPath();
-            ctx.arc(x, y, 4, 0, Math.PI * 2);
+            ctx.arc(x, y, 4.5, 0, Math.PI * 2);
             ctx.fill();
           }
         }
       }
 
-      // Map marker that follows hover
+      // marker synced to profile
       const hoverMarker = L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 }).addTo(map);
 
       function nearestIndexFromX(clientX) {
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
-        const padL = 40, padR = 10;
+        const padL = 46, padR = 12;
         const plotW = rect.width - padL - padR;
         const t = Math.max(0, Math.min(1, (x - padL) / (plotW || 1)));
         const targetKm = t * (distKm[distKm.length-1] || 0);
 
-        // binary search nearest by distKm
         let lo = 0, hi = distKm.length - 1;
         while (hi - lo > 1) {
           const mid = (lo + hi) >> 1;
@@ -346,11 +365,7 @@
       canvas.addEventListener("mousemove", (ev) => {
         const idx = nearestIndexFromX(ev.clientX);
         draw(idx);
-
-        // move map marker
         hoverMarker.setLatLng(latlngs[idx]);
-
-        // tooltip
         updateTooltip(idx, ev.clientX, ev.clientY);
       });
 
@@ -359,10 +374,7 @@
         draw(null);
       });
 
-      // initial draw
       draw(null);
-
-      // redraw on resize
       window.addEventListener("resize", () => draw(null));
     }
 
@@ -393,14 +405,12 @@
         const line = L.polyline(latlngs, { weight: 4, opacity: 0.95 }).addTo(map);
         map.fitBounds(line.getBounds().pad(0.18));
 
-        // Start/end markers
         L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 })
           .addTo(map).bindTooltip("Start");
 
         L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, opacity: 1, fillOpacity: 0.9 })
           .addTo(map).bindTooltip("End");
 
-        // Elevation profile below the map
         setupElevationProfile(points, latlngs);
       })
       .catch(err => showError(err.message || String(err)));
