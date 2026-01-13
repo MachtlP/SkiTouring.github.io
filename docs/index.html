@@ -1,30 +1,63 @@
-<section class="hero" aria-label="Guidebook cover">
-  <div class="hero-media">
-    <img class="hero-img" src="./assets/cover.jpg" alt="Touring Guide Cover">
-  </div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Touring Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <div class="hero-inner">
-    <div class="hero-badge">
-      <span class="dot"></span>
-      <span>Sea to Sky • Touring Guide</span>
-      <span class="sep">•</span>
-      <span>Winter 2025/26</span>
-    </div>
+  <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/hero.css" />
 
-    <h2 class="hero-title">Touring Guide</h2>
+  <style>
+    body { min-height: 100vh; }
 
-    <p class="hero-sub">
-      This map-linked ski touring guide brings together GPX tracks, photos, and practical notes in one place.
-      I created it after finding it surprisingly difficult to locate concise, route-specific GPX information without endlessly scrolling through scattered trip reports.
-      The guide is a curated collection of some of my own ski touring tracks, complemented by images and brief observations from the field.
-      These routes reflect personal experiences and are not guaranteed to represent the best or safest approach under all conditions.
-      <b>Always assess current local conditions and consult the avalanche forecast before heading out.</b>
-    </p>
+    .landing{
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+    }
 
-    <div class="enter-row">
-      <a class="hero-btn primary" href="./guide.html">Open the book</a>
-    </div>
+    /* Center the cover and give it a sensible max width */
+    .hero{
+      width: min(1100px, calc(100vw - 36px));
+      margin: 0;
+    }
+  </style>
+</head>
 
-    <p class="enter-note"><strong>Remark:</strong> This project is a work in progress, and I’ll be adding new tours as I go.</p>
-  </div>
-</section>
+<body>
+  <main class="landing">
+    <section class="hero" aria-label="Guidebook cover">
+      <div class="hero-media">
+        <img class="hero-img" src="./assets/cover.jpg" alt="Touring Guide cover">
+      </div>
+
+      <div class="hero-inner">
+        <div class="hero-badge">
+          <span class="dot"></span>
+          <span>Sea to Sky • Touring Guide</span>
+          <span class="sep">•</span>
+          <span>Winter 2025/26</span>
+        </div>
+
+        <h2 class="hero-title">Touring Guide</h2>
+
+        <p class="hero-sub">
+          This map-linked ski touring guide brings together GPX tracks, photos, and practical notes in one place.
+          I created it after finding it surprisingly difficult to locate concise, route-specific GPX information without endlessly scrolling through scattered trip reports.
+          These routes reflect personal experiences and are not guaranteed to represent the best or safest approach under all conditions.
+          <b>Always assess current local conditions and consult the avalanche forecast before heading out.</b>
+        </p>
+
+        <div class="enter-row">
+          <a class="hero-btn primary" href="./guide.html">Open the book</a>
+          <a class="hero-btn" href="./guide.html#map-section">Open map</a>
+        </div>
+
+        <p class="enter-note"><strong>Remark:</strong> This project is a work in progress, and I’ll be adding new tours as I go.</p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
