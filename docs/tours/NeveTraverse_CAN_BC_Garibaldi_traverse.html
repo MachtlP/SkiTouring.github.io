@@ -273,114 +273,114 @@
       }
 
       function draw(cursorIdx = null) {
-        const { dpr, W, H } = resizeCanvas();
-        const ctx = canvas.getContext("2d");
+  const { dpr, W, H } = resizeCanvas();
+  const ctx = canvas.getContext("2d");
 
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const padL = 52, padR = 12, padT = 12, padB = 28;
-        const plotW = W - padL - padR;
-        const plotH = H - padT - padB;
+  const padL = 52, padR = 12, padT = 12, padB = 28;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
 
-        // SOLID WHITE BG
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = "#fff";
-        ctx.fillRect(0, 0, W, H);
+  // SOLID WHITE BG
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, W, H);
 
-        // GRID (VISIBLE) – horizontal + vertical every 1 km
-ctx.strokeStyle = "rgba(0,0,0,0.25)";
-ctx.lineWidth = 1;
+  // total distance once (reuse everywhere)
+  const totalKm = distKm[distKm.length - 1] || 0;
 
-// horizontal grid (every 1/5 of height)
-for (let i = 0; i <= 5; i++) {
-  const y = padT + (i / 5) * plotH;
-  ctx.beginPath();
-  ctx.moveTo(padL, y);
-  ctx.lineTo(padL + plotW, y);
-  ctx.stroke();
-}
+  // GRID (VISIBLE) – horizontal + vertical every 1 km
+  ctx.strokeStyle = "rgba(0,0,0,0.25)";
+  ctx.lineWidth = 1;
 
-// vertical grid (every 1 km)
-const totalKm = distKm[distKm.length - 1] || 0;
-if (totalKm > 0) {
-  const maxTick = Math.floor(totalKm);
-  for (let k = 0; k <= maxTick; k++) {
-    const x = padL + (k / totalKm) * plotW;
+  // horizontal grid (every 1/5 of height)
+  for (let i = 0; i <= 5; i++) {
+    const y = padT + (i / 5) * plotH;
     ctx.beginPath();
-    ctx.moveTo(x, padT);
-    ctx.lineTo(x, padT + plotH);
+    ctx.moveTo(padL, y);
+    ctx.lineTo(padL + plotW, y);
     ctx.stroke();
+  }
+
+  // vertical grid (every 1 km)
+  if (totalKm > 0) {
+    const maxTick = Math.floor(totalKm);
+    for (let k = 0; k <= maxTick; k++) {
+      const x = padL + (k / totalKm) * plotW;
+      ctx.beginPath();
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, padT + plotH);
+      ctx.stroke();
+    }
+  }
+
+  // LABELS (DARK)
+  ctx.fillStyle = "#111";
+  ctx.font = "12px system-ui, sans-serif";
+  ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
+  ctx.fillText(`${Math.round(minE)} m`, 8, padT + plotH);
+  ctx.fillText("0 km", padL, H - 8);
+  ctx.fillText(`${(totalKm || 0).toFixed(1)} km`, padL + plotW - 48, H - 8);
+
+  // map distance->x, elevation->y
+  const denomKm = totalKm || 1; // avoid div by 0
+  const xFor = i => padL + (distKm[i] / denomKm) * plotW;
+  const yForE = e => {
+    const t = (e - minE) / ((maxE - minE) || 1);
+    return padT + (1 - t) * plotH;
+  };
+
+  // PROFILE PATH
+  let firstIdx = -1;
+  ctx.beginPath();
+  for (let i = 0; i < elev.length; i++) {
+    if (elev[i] === null) continue;
+    if (firstIdx === -1) firstIdx = i;
+    const x = xFor(i);
+    const y = yForE(elev[i]);
+    if (i === firstIdx) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+
+  // STRONG FILL
+  ctx.lineJoin = "round";
+  ctx.lineCap  = "round";
+
+  ctx.strokeStyle = "#000";
+  ctx.lineWidth = 5;
+  ctx.stroke();
+
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = "rgba(0,0,0,0.55)";
+  ctx.lineTo(padL + plotW, padT + plotH);
+  ctx.lineTo(padL, padT + plotH);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // CURSOR
+  if (cursorIdx !== null) {
+    const e = elev[cursorIdx];
+    if (e !== null) {
+      const x = xFor(cursorIdx);
+      const y = yForE(e);
+
+      ctx.strokeStyle = "#000";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(x, padT);
+      ctx.lineTo(x, padT + plotH);
+      ctx.stroke();
+
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 }
 
-        }
-
-        // LABELS (DARK)
-        ctx.fillStyle = "#111";
-        ctx.font = "12px system-ui, sans-serif";
-        ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
-        ctx.fillText(`${Math.round(minE)} m`, 8, padT + plotH);
-        ctx.fillText("0 km", padL, H - 8);
-        ctx.fillText(`${distKm[distKm.length-1].toFixed(1)} km`, padL + plotW - 48, H - 8);
-
-        const totalKm = distKm[distKm.length-1] || 1;
-        const xFor = i => padL + (distKm[i] / totalKm) * plotW;
-        const yForE = e => {
-          const t = (e - minE) / ((maxE - minE) || 1);
-          return padT + (1 - t) * plotH;
-        };
-
-        // PROFILE PATH
-        let firstIdx = -1;
-        ctx.beginPath();
-        for (let i = 0; i < elev.length; i++) {
-          if (elev[i] === null) continue;
-          if (firstIdx === -1) firstIdx = i;
-          const x = xFor(i);
-          const y = yForE(elev[i]);
-          if (i === firstIdx) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-
-        // STRONG FILL
-        ctx.lineJoin = "round";
-        ctx.lineCap  = "round";
-
-        ctx.strokeStyle = "#000";
-        ctx.lineWidth = 5;
-
-        // Keep a copy of path for fill
-        ctx.stroke();
-
-        ctx.globalAlpha = 0.25;      // MUCH stronger fill
-        ctx.fillStyle = "rgba(0,0,0,0.55)";
-        ctx.lineTo(padL + plotW, padT + plotH);
-        ctx.lineTo(padL, padT + plotH);
-        ctx.closePath();
-        ctx.fill();
-        ctx.globalAlpha = 1;
-
-        // CURSOR
-        if (cursorIdx !== null) {
-          const e = elev[cursorIdx];
-          if (e !== null) {
-            const x = xFor(cursorIdx);
-            const y = yForE(e);
-
-            ctx.strokeStyle = "#000";
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(x, padT);
-            ctx.lineTo(x, padT + plotH);
-            ctx.stroke();
-
-            ctx.fillStyle = "#000";
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-      }
 
       // marker synced to profile (also high visibility)
       const hoverMarker = L.circleMarker(latlngs[0], {
