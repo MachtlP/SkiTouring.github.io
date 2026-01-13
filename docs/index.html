@@ -25,6 +25,26 @@
     }
   </style>
 </head>
+<script>
+  (function () {
+    const btn = document.getElementById("openBook");
+    const hero = document.querySelector(".hero");
+    if (!btn || !hero) return;
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      // play animation
+      hero.classList.add("opening");
+
+      // then navigate
+      const href = btn.getAttribute("href") || "./guide.html";
+      window.setTimeout(() => {
+        window.location.href = href;
+      }, 520);
+    });
+  })();
+</script>
 
 <body>
   <main class="landing">
@@ -61,7 +81,7 @@
         <!-- BOTTOM -->
         <div class="hero-bottom">
           <div class="enter-row">
-            <a class="hero-btn primary" href="./guide.html">Open the book</a>
+            <a class="hero-btn primary" id="openBook" href="./guide.html">Open the book</a>
           </div>
 
           <p class="enter-note"><strong>Remark:</strong> This project is a work in progress, and I’ll be adding new tours as I go.</p>

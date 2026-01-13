@@ -225,3 +225,69 @@
   .hero-bottom{ margin-bottom: 12px; }
   .hero-sub{ font-size: 14px; max-width: 52ch; }
 }
+
+/* =========================
+   OPEN BOOK ANIMATION (landing)
+   Add .opening to .hero
+   ========================= */
+
+.hero{
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  will-change: transform, opacity, filter;
+}
+
+/* the framed cover (image) rotates like a book cover */
+.hero-media{
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* a little “spine shadow” to sell the effect */
+.hero-media::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.55),
+    rgba(0,0,0,0.15) 22%,
+    rgba(0,0,0,0.00) 42%
+  );
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.hero.opening .hero-media::after{
+  opacity: 1;
+}
+
+/* animate the cover opening */
+.hero.opening .hero-media{
+  animation: coverOpen 520ms cubic-bezier(.2,.8,.2,1) forwards;
+}
+
+/* fade/slide text away so the cover motion reads clean */
+.hero.opening .hero-inner{
+  animation: textFade 280ms ease forwards;
+}
+
+@keyframes coverOpen{
+  0%   { transform: perspective(1200px) rotateY(0deg) translateX(0); }
+  100% { transform: perspective(1200px) rotateY(-62deg) translateX(-8px); }
+}
+
+@keyframes textFade{
+  0%   { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(6px); }
+}
+
+/* accessibility */
+@media (prefers-reduced-motion: reduce){
+  .hero.opening .hero-media,
+  .hero.opening .hero-inner{
+    animation: none !important;
+  }
+}
