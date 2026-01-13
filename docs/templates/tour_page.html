@@ -234,15 +234,32 @@
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, W, H);
 
-        // GRID (VISIBLE)
-        ctx.strokeStyle = "rgba(0,0,0,0.25)";
-        ctx.lineWidth = 1;
-        for (let i = 0; i <= 5; i++) {
-          const y = padT + (i/5) * plotH;
-          ctx.beginPath();
-          ctx.moveTo(padL, y);
-          ctx.lineTo(padL + plotW, y);
-          ctx.stroke();
+        // GRID (VISIBLE) – horizontal + vertical every 1 km
+ctx.strokeStyle = "rgba(0,0,0,0.25)";
+ctx.lineWidth = 1;
+
+// horizontal grid (every 1/5 of height)
+for (let i = 0; i <= 5; i++) {
+  const y = padT + (i / 5) * plotH;
+  ctx.beginPath();
+  ctx.moveTo(padL, y);
+  ctx.lineTo(padL + plotW, y);
+  ctx.stroke();
+}
+
+// vertical grid (every 1 km)
+const totalKm = distKm[distKm.length - 1] || 0;
+if (totalKm > 0) {
+  const maxTick = Math.floor(totalKm);
+  for (let k = 0; k <= maxTick; k++) {
+    const x = padL + (k / totalKm) * plotW;
+    ctx.beginPath();
+    ctx.moveTo(x, padT);
+    ctx.lineTo(x, padT + plotH);
+    ctx.stroke();
+  }
+}
+
         }
 
         // LABELS (DARK)
@@ -282,7 +299,7 @@
         // Keep a copy of path for fill
         ctx.stroke();
 
-        ctx.globalAlpha = 0.55;      // MUCH stronger fill
+        ctx.globalAlpha = 0.25;      // MUCH stronger fill
         ctx.fillStyle = "rgba(0,0,0,0.55)";
         ctx.lineTo(padL + plotW, padT + plotH);
         ctx.lineTo(padL, padT + plotH);
