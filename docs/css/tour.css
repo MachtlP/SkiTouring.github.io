@@ -66,6 +66,7 @@
   box-shadow: var(--shadow);
 }
 
+.map-wrap { border-radius: 14px; overflow: hidden; }
 #map{
   height: 420px;
 }
