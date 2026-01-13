@@ -13,9 +13,7 @@ from datetime import datetime
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DOCS = REPO_ROOT / "docs"
 
-DETAIL_GEOJSON_DIR = DOCS / "data" / "tours_detail"
-# Optional: overview file can be used for metadata fallback if you want
-OVERVIEW_GEOJSON_PATH = DOCS / "data" / "tours.geojson"
+GEOJSON_PATH = DOCS / "data" / "tours.geojson"
 TEMPLATE_HTML_PATH = DOCS / "templates" / "tour_page.html"
 
 MD_DIR = DOCS / "tours_md"
@@ -187,99 +185,65 @@ def fill_template(template_html: str, replacements: dict[str, str]) -> str:
 # Build
 # -------------------------
 def main() -> None:
-    if not DETAIL_GEOJSON_DIR.exists():
-        raise SystemExit(f"Missing detail geojson directory: {DETAIL_GEOJSON_DIR}")
+    if not GEOJSON_PATH.exists():
+        raise SystemExit(f"Missing geojson: {GEOJSON_PATH}")
     if not TEMPLATE_HTML_PATH.exists():
         raise SystemExit(f"Missing HTML template: {TEMPLATE_HTML_PATH}")
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     MD_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Optional overview metadata (if present). We *don't* require it.
-    overview_by_slug: dict[str, dict] = {}
-    if OVERVIEW_GEOJSON_PATH.exists():
-        try:
-            ov = read_json(OVERVIEW_GEOJSON_PATH)
-            for f in (ov.get("features") or []):
-                p = (f or {}).get("properties") or {}
-                s = safe_text(p.get("slug") or "").strip()
-                if s:
-                    overview_by_slug[s] = p
-        except Exception:
-            # keep going; detail files are the source of truth
-            overview_by_slug = {}
+    gj = read_json(GEOJSON_PATH)
+    feats = gj.get("features") or []
+    if not feats:
+        raise SystemExit("No features in tours.geojson")
 
     template_html = TEMPLATE_HTML_PATH.read_text(encoding="utf-8")
-
-    detail_files = sorted(DETAIL_GEOJSON_DIR.glob("*.geojson"))
-    if not detail_files:
-        raise SystemExit(f"No .geojson files found in: {DETAIL_GEOJSON_DIR}")
 
     built = 0
     skipped = 0
     created_md = 0
 
-    for gj_path in detail_files:
-        slug = gj_path.stem
+    for feat in feats:
+        props = feat.get("properties") or {}
+        geom = feat.get("geometry") or {}
 
-        gj = read_json(gj_path)
-
-        # Accept either Feature or FeatureCollection (use first feature)
-        feature = None
-        if isinstance(gj, dict) and gj.get("type") == "Feature":
-            feature = gj
-        elif isinstance(gj, dict) and gj.get("type") == "FeatureCollection":
-            feats = gj.get("features") or []
-            if feats:
-                feature = feats[0]
-        if not feature:
-            print(f"Skipping invalid GeoJSON (not a Feature): {gj_path}")
+        slug = props.get("slug") or ""
+        if not slug:
+            # fallback: derive from "page" like "./tours/<slug>.html"
+            page = safe_text(props.get("page", ""))
+            slug = Path(page).stem if page else ""
+        if not slug:
+            print("Skipping feature without slug")
             continue
-
-        props = (feature.get("properties") or {}) if isinstance(feature, dict) else {}
-        geom = (feature.get("geometry") or {}) if isinstance(feature, dict) else {}
-
-        # Allow properties.slug to override, but keep filename as fallback
-        slug_prop = safe_text(props.get("slug") or "").strip()
-        if slug_prop:
-            slug = slug_prop
-
-        # Merge in overview metadata (detail props win)
-        if slug in overview_by_slug:
-            merged = dict(overview_by_slug[slug])
-            merged.update(props)
-            props = merged
 
         title = safe_text(props.get("title") or slug).strip() or slug
         province = safe_text(props.get("province") or props.get("province_code") or "").strip()
         region = safe_text(props.get("region") or "").strip()
 
-        # Ensure markdown exists
         md_path = MD_DIR / f"{slug}.md"
+        out_path = OUT_DIR / f"{slug}.html"
+
+        # Scaffold markdown if missing
         if scaffold_markdown_if_missing(md_path, slug, props):
             created_md += 1
 
-        # Read markdown and convert to HTML
-        md_text = md_path.read_text(encoding="utf-8")
-        md_html = md_to_html(md_text)
+        # Build conditions: rebuild if output missing OR inputs newer
+        needs = (not out_path.exists()) or newer(GEOJSON_PATH, out_path) or newer(md_path, out_path)
+        if not needs:
+            skipped += 1
+            continue
 
-        # If template still expects COORDS_JSON, supply a lightweight [lat,lon] array
-        coords_json = "[]"
-        try:
-            coords = geom.get("coordinates") if isinstance(geom, dict) else None
-            if isinstance(coords, list) and coords and isinstance(coords[0], list):
-                # coords are usually [[lon,lat,ele], ...]
-                latlon = [[c[1], c[0]] for c in coords if isinstance(c, list) and len(c) >= 2]
-                coords_json = json.dumps(latlon)
-        except Exception:
-            coords_json = "[]"
+        md_text = md_path.read_text(encoding="utf-8") if md_path.exists() else ""
+        md_html = md_to_html(md_text) if md_text.strip() else "<p><em>No notes yet.</em></p>"
 
+        coords = geom.get("coordinates") or []
+        coords_json = json.dumps(coords)
         title_json = json.dumps(title)
 
-        # Links (relative from docs/tours/<slug>.html)
         gpx_url = as_tour_relative(safe_text(props.get("gpx") or f"./tracks/{slug}.gpx"))
-        detail_geojson_url = as_tour_relative(f"./data/tours_detail/{slug}.geojson")
 
+        # Replace placeholders
         replacements = {
             "{{TITLE}}": html_escape(title),
             "{{PROVINCE}}": html_escape(province) if province else "—",
@@ -288,23 +252,11 @@ def main() -> None:
             "{{CONTENT_HTML}}": md_html,
             "{{COORDS_JSON}}": coords_json,
             "{{TITLE_JSON}}": title_json,
-            "{{SLUG}}": html_escape(slug),
-            "{{DETAIL_GEOJSON_URL}}": html_escape(detail_geojson_url),
         }
 
-        out_path = OUT_DIR / f"{slug}.html"
-
-        # Skip if up-to-date: output newer than template + md + geojson
-        latest_input_mtime = max(
-            TEMPLATE_HTML_PATH.stat().st_mtime,
-            md_path.stat().st_mtime,
-            gj_path.stat().st_mtime,
-        )
-        if out_path.exists() and out_path.stat().st_mtime >= latest_input_mtime:
-            skipped += 1
-            continue
-
         page = fill_template(template_html, replacements)
+
+        # nice-to-have: stamp build time (optional placeholder)
         page = page.replace("{{BUILT_AT}}", datetime.now().strftime("%Y-%m-%d %H:%M"))
 
         write_text(out_path, page)
@@ -313,7 +265,6 @@ def main() -> None:
     print(f"Created markdown files: {created_md}")
     print(f"Built tour pages: {built}")
     print(f"Skipped (up to date): {skipped}")
-    print(f"Detail folder: {DETAIL_GEOJSON_DIR}")
     print(f"Output folder: {OUT_DIR}")
     print(f"Markdown folder: {MD_DIR}")
 
