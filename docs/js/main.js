@@ -1,7 +1,7 @@
 // docs/js/main.js
 (() => {
   // Adjust if needed:
-  const DATA_URL = "data/tours.geojson";
+  const DATA_URL = "./data/tours.geojson";
 
   let map;
   let allFeatures = [];
