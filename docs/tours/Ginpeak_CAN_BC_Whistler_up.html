@@ -140,6 +140,31 @@
       return null;
     }
 
+    function coordsToLatLngs(geometry) {
+      // Supports LineString and MultiLineString
+      const t = geometry?.type;
+      const c = geometry?.coordinates;
+
+      if (!t || !c) return [];
+
+      if (t === "LineString") {
+        return c
+          .filter(p => Array.isArray(p) && p.length >= 2)
+          .map(p => [Number(p[1]), Number(p[0])]); // [lat, lon]
+      }
+
+      if (t === "MultiLineString") {
+        // flatten all segments into one line (good enough for tracks)
+        const flat = c.flat();
+        return flat
+          .filter(p => Array.isArray(p) && p.length >= 2)
+          .map(p => [Number(p[1]), Number(p[0])]);
+      }
+
+      // If you ever store Polygon etc., add handling here
+      return [];
+    }
+
     fetch(detailUrl)
       .then(r => {
         if (!r.ok) throw new Error(`Failed to load GeoJSON: ${detailUrl} (${r.status})`);
@@ -147,25 +172,19 @@
       })
       .then(gj => {
         const feature = pickFeature(gj);
-        if (!feature || !feature.geometry || !Array.isArray(feature.geometry.coordinates)) {
-          throw new Error("Detail GeoJSON missing geometry.coordinates (Feature/FeatureCollection expected)");
+        if (!feature || !feature.geometry) {
+          throw new Error("Detail GeoJSON must be a Feature or FeatureCollection with geometry");
         }
 
-        const coords = feature.geometry.coordinates; // [[lon,lat,ele?], ...]
-
-        const latlngs = coords
-          .filter(c => Array.isArray(c) && c.length >= 2)
-          .map(c => [Number(c[1]), Number(c[0])]); // [lat, lon]
-
+        const latlngs = coordsToLatLngs(feature.geometry);
         if (latlngs.length < 2) {
-          throw new Error("Not enough coordinates to draw a track");
+          throw new Error(`Not enough coordinates to draw a track (got ${latlngs.length})`);
         }
-
-        console.log("Loaded track:", slug, "points:", latlngs.length, "url:", detailUrl);
 
         const line = L.polyline(latlngs, { weight: 4, opacity: 0.9 }).addTo(map);
         map.fitBounds(line.getBounds().pad(0.18));
 
+        // Start/end markers
         L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 })
           .addTo(map).bindTooltip("Start");
 
