@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import json
 import html
 import re
@@ -22,6 +23,19 @@ MD_DIR = DOCS / "tours_md"
 MD_TEMPLATE_PATH = MD_DIR / "_template.md"
 
 OUT_DIR = DOCS / "tours"
+
+
+# -------------------------
+# CLI
+# -------------------------
+def parse_args():
+    p = argparse.ArgumentParser(description="Build tour pages from detail GeoJSON files")
+    p.add_argument(
+        "--rerun",
+        action="store_true",
+        help="Force overwrite HTML output (rebuild all pages).",
+    )
+    return p.parse_args()
 
 
 # -------------------------
@@ -61,9 +75,9 @@ def simple_md_fallback(md_text: str) -> str:
 
     def inline(s: str) -> str:
         s = html.escape(s)
-        s = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', s)            # links
-        s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)                   # bold
-        s = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", s)                  # italic
+        s = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', s)  # links
+        s = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", s)  # bold
+        s = re.sub(r"(?<!\*)\*([^*]+)\*(?!\*)", r"<em>\1</em>", s)  # italic
         return s
 
     for raw in lines:
@@ -120,13 +134,6 @@ def read_json(path: Path) -> dict:
 def write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
-
-
-def newer(a: Path, b: Path) -> bool:
-    """True if a is newer than b, or b doesn't exist."""
-    if not b.exists():
-        return True
-    return a.stat().st_mtime > b.stat().st_mtime
 
 
 def as_tour_relative(url: str) -> str:
@@ -187,6 +194,9 @@ def fill_template(template_html: str, replacements: dict[str, str]) -> str:
 # Build
 # -------------------------
 def main() -> None:
+    args = parse_args()
+    rerun = bool(args.rerun)
+
     if not DETAIL_GEOJSON_DIR.exists():
         raise SystemExit(f"Missing detail geojson directory: {DETAIL_GEOJSON_DIR}")
     if not TEMPLATE_HTML_PATH.exists():
@@ -206,7 +216,6 @@ def main() -> None:
                 if s:
                     overview_by_slug[s] = p
         except Exception:
-            # keep going; detail files are the source of truth
             overview_by_slug = {}
 
     template_html = TEMPLATE_HTML_PATH.read_text(encoding="utf-8")
@@ -218,6 +227,7 @@ def main() -> None:
     built = 0
     skipped = 0
     created_md = 0
+    forced = 0
 
     for gj_path in detail_files:
         slug = gj_path.stem
@@ -294,15 +304,20 @@ def main() -> None:
 
         out_path = OUT_DIR / f"{slug}.html"
 
-        # Skip if up-to-date: output newer than template + md + geojson
-        latest_input_mtime = max(
-            TEMPLATE_HTML_PATH.stat().st_mtime,
-            md_path.stat().st_mtime,
-            gj_path.stat().st_mtime,
-        )
-        if out_path.exists() and out_path.stat().st_mtime >= latest_input_mtime:
-            skipped += 1
-            continue
+        # -------- FORCE OVERWRITE MODE --------
+        if not rerun:
+            # Skip if up-to-date: output newer than template + md + geojson
+            latest_input_mtime = max(
+                TEMPLATE_HTML_PATH.stat().st_mtime,
+                md_path.stat().st_mtime,
+                gj_path.stat().st_mtime,
+            )
+            if out_path.exists() and out_path.stat().st_mtime >= latest_input_mtime:
+                skipped += 1
+                continue
+        else:
+            if out_path.exists():
+                forced += 1
 
         page = fill_template(template_html, replacements)
         page = page.replace("{{BUILT_AT}}", datetime.now().strftime("%Y-%m-%d %H:%M"))
@@ -312,7 +327,10 @@ def main() -> None:
 
     print(f"Created markdown files: {created_md}")
     print(f"Built tour pages: {built}")
-    print(f"Skipped (up to date): {skipped}")
+    if rerun:
+        print(f"Forced overwrites: {forced}")
+    else:
+        print(f"Skipped (up to date): {skipped}")
     print(f"Detail folder: {DETAIL_GEOJSON_DIR}")
     print(f"Output folder: {OUT_DIR}")
     print(f"Markdown folder: {MD_DIR}")
