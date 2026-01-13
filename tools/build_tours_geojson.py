@@ -4,12 +4,16 @@ import math
 import glob
 import json
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DOCS = os.path.join(REPO_ROOT, "docs")
 
-TRACKS_DIR = os.path.join(DOCS, "tracks")
-OUT_PATH = os.path.join(DOCS, "data", "tours.geojson")
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]   # repo/
+DOCS = REPO_ROOT / "docs"
+TRACKS_DIR = DOCS / "tracks"
+OUT_PATH = DOCS / "data" / "tours.geojson"
+
 
 # ---- helpers ----
 def haversine_km(lat1, lon1, lat2, lon2):
@@ -76,7 +80,14 @@ def main():
     os.makedirs(os.path.dirname(OUT_PATH), exist_ok=True)
 
     features = []
-    gpx_files = sorted(glob.glob(os.path.join(TRACKS_DIR, "*.gpx")))
+    gpx_files = sorted(TRACKS_DIR.glob("*.gpx"))
+
+    print("REPO_ROOT  =", REPO_ROOT)
+    print("TRACKS_DIR =", TRACKS_DIR)
+    print("Exists?    =", TRACKS_DIR.is_dir())
+
+    print("Contents   =", os.listdir(TRACKS_DIR)[:20])
+
     if not gpx_files:
         raise SystemExit(f"No GPX files found in {TRACKS_DIR}")
 
