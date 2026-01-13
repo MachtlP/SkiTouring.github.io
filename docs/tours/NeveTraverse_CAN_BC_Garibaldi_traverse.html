@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Nevetraverse • Touring Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link rel="stylesheet" href="../css/base.css" />
+  <link rel="stylesheet" href="../css/book.css" />
+  <link rel="stylesheet" href="../css/map.css" />
+  <link rel="stylesheet" href="../css/tour.css" />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    #map { height: 420px; width: 100%; border-radius: 12px; }
+
+    .elev-wrap {
+      margin-top: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.10);
+      padding: 10px;
+      position: relative;
+    }
+    .elev-head {
+      display: flex;
+      gap: 10px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .elev-title { font-weight: 600; }
+    .elev-stats { opacity: 0.75; font-size: 0.95rem; }
+
+    /* Ensure the canvas gets real height in all layouts */
+    #elevCanvas {
+      width: 100%;
+      height: 180px;
+      display: block;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.02);
+    }
+
+    .elev-note {
+      margin-top: 6px;
+      opacity: 0.7;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .elev-tooltip {
+      position: absolute;
+      pointer-events: none;
+      padding: 6px 8px;
+      border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.15);
+      background: rgba(255,255,255,0.95);
+      font-size: 0.9rem;
+      transform: translate(10px, -10px);
+      display: none;
+      white-space: nowrap;
+      z-index: 10;
+    }
+
+    .map-error {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border: 1px solid rgba(0,0,0,0.15);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background: rgba(255, 235, 235, 0.9);
+      display: none;
+    }
+    .map-error code { font-size: 0.9em; }
+  </style>
+</head>
+
+<body>
+  <main class="tour-wrap">
+
+    <nav class="tour-nav">
+      <a href="../guide.html">← Back to guide</a>
+      <a href="../tracks/NeveTraverse_CAN_BC_Garibaldi_traverse.gpx" download class="btn">Download GPX</a>
+    </nav>
+
+    <header class="tour-header">
+      <h1 class="tour-title">Nevetraverse</h1>
+      <p class="tour-sub">British Columbia • Garibaldi</p>
+    </header>
+
+    <section class="tour-map">
+      <div id="map"></div>
+
+      <!-- Elevation profile -->
+      <div class="elev-wrap" id="elevWrap">
+        <div class="elev-head">
+          <div class="elev-title">Elevation profile</div>
+          <div class="elev-stats" id="elevStats">loading…</div>
+        </div>
+        <canvas id="elevCanvas"></canvas>
+        <div class="elev-note" id="elevNote">No elevation data found in this GeoJSON.</div>
+        <div class="elev-tooltip" id="elevTooltip"></div>
+      </div>
+
+      <div id="mapError" class="map-error"></div>
+    </section>
+
+    <section class="tour-content">
+      <p>&lt;!--</p>
+<p>Template for: NeveTraverse_CAN_BC_Garibaldi_traverse</p>
+<p>This file will be auto-created if missing.</p>
+<p>Write content only — metadata comes from tours.geojson.</p>
+<p>--&gt;</p>
+<h1>Overview</h1>
+<p>TODO</p>
+<h2>Quick facts</h2>
+<ul>
+<li><strong>Start / trailhead:</strong> TODO</li>
+<li><strong>Best season:</strong> TODO</li>
+<li><strong>Aspect / elevation band:</strong> TODO</li>
+<li><strong>Typical time:</strong> TODO</li>
+<li><strong>Typical distance / vert:</strong> TODO</li>
+<li><strong>Group size / parking:</strong> TODO</li>
+</ul>
+<h1>Access</h1>
+<p>TODO</p>
+<h1>Route</h1>
+<h2>Ascent</h2>
+<p>TODO</p>
+<h2>Descent</h2>
+<p>TODO</p>
+<h1>Avalanche terrain &amp; hazards</h1>
+<ul>
+<li><strong>Avalanche problems to watch:</strong> TODO</li>
+<li><strong>Terrain traps:</strong> TODO</li>
+<li><strong>Common “gotchas”:</strong> TODO</li>
+<li><strong>Notes on safe options / bail-outs:</strong> TODO</li>
+</ul>
+<h1>Conditions &amp; timing</h1>
+<ul>
+<li>When the route is best (time of day, stability patterns, melt-freeze, etc.)</li>
+<li>What makes it a “no-go”</li>
+<li>Any micro-weather notes (wind loading zones, sun hits early, etc.)</li>
+</ul>
+<h1>Variants</h1>
+<ul>
+<li>Not outlined yet</li>
+</ul>
+<h1>Photos</h1>
+<p>&gt; Add photos by dropping images into `docs/photos/NeveTraverse_CAN_BC_Garibaldi_traverse/`.</p>
+<p>Optional captions:</p>
+<ul>
+<li>`01.jpg` — TODO caption</li>
+<li>`02.jpg` — TODO caption</li>
+</ul>
+<h1>References / links</h1>
+<ul>
+<li><a href="https://example.com">Link title</a></li>
+<li><a href="https://avalanche.ca/">Avalanche Canada</a></li>
+</ul>
+<p>---</p>
+<p><strong>Disclaimer:</strong> This is a personal route note, not a guarantee of safety. Always assess current conditions and consult the avalanche bulletin.</p>
+    </section>
+
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <script>
+    const slug = "NeveTraverse_CAN_BC_Garibaldi_traverse";
+    const detailUrl = `../data/tours_detail/${slug}.geojson`;
+
+    const map = L.map("map", { zoomControl: true });
+
+    // --- Base layers ---
+    const openTopo = L.tileLayer(
+      "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      { maxZoom: 17, attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap" }
+    );
+
+    const openStreet = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
+    );
+
+    openTopo.addTo(map);
+    L.control.layers({ "Topo": openTopo, "Street": openStreet }, null, { collapsed: true }).addTo(map);
+
+    // Fallback view (used only if loading fails)
+    map.setView([50.0, -123.0], 7);
+
+    function htmlEscape(s) {
+      return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function showError(msg, obj) {
+      console.error(msg, obj || "");
+      const el = document.getElementById("mapError");
+      if (!el) return;
+      el.style.display = "block";
+      const extra = obj ? `<br><code>${htmlEscape(JSON.stringify(obj).slice(0, 600))}${JSON.stringify(obj).length > 600 ? "…" : ""}</code>` : "";
+      el.innerHTML = `<strong>Map load error:</strong> ${htmlEscape(msg)}${extra}`;
+    }
+
+    function extractGeometry(gj) {
+      if (!gj || typeof gj !== "object") return null;
+
+      if (gj.type === "Feature" && gj.geometry) return gj.geometry;
+
+      if (gj.type === "FeatureCollection" && Array.isArray(gj.features) && gj.features.length) {
+        const f0 = gj.features[0];
+        if (f0 && f0.geometry) return f0.geometry;
+      }
+
+      if (gj.geometry && gj.geometry.coordinates) return gj.geometry;
+
+      if ((gj.type === "LineString" || gj.type === "MultiLineString") && gj.coordinates) return gj;
+
+      if (gj.coordinates) return { type: "LineString", coordinates: gj.coordinates };
+
+      return null;
+    }
+
+    // Flatten coords into array of points: [[lon,lat,ele?], ...]
+    function flattenToPoints(coords) {
+      if (Array.isArray(coords) && coords.length && Array.isArray(coords[0]) && typeof coords[0][0] === "number") {
+        return coords;
+      }
+      if (Array.isArray(coords)) return coords.flatMap(flattenToPoints);
+      return [];
+    }
+
+    // Haversine distance (meters)
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    function setupElevationProfile(points, latlngs) {
+      const elevWrap = document.getElementById("elevWrap");
+      const note = document.getElementById("elevNote");
+      const statsEl = document.getElementById("elevStats");
+      const canvas = document.getElementById("elevCanvas");
+      const tooltip = document.getElementById("elevTooltip");
+
+      // Elevation from 3rd coord
+      const elev = points.map(p => (p.length >= 3 && isFinite(p[2]) ? Number(p[2]) : null));
+      const hasElev = elev.some(v => v !== null);
+
+      if (!hasElev) {
+        note.style.display = "block";
+        statsEl.textContent = "no elevation";
+        return;
+      }
+
+      // Cumulative distance (km)
+      const distKm = new Array(latlngs.length).fill(0);
+      for (let i = 1; i < latlngs.length; i++) {
+        const d = haversineMeters(latlngs[i-1][0], latlngs[i-1][1], latlngs[i][0], latlngs[i][1]);
+        distKm[i] = distKm[i-1] + d / 1000;
+      }
+
+      // Stats
+      const elevVals = elev.filter(v => v !== null);
+      const minE = Math.min(...elevVals);
+      const maxE = Math.max(...elevVals);
+
+      let gain = 0, loss = 0;
+      for (let i = 1; i < elev.length; i++) {
+        if (elev[i] === null || elev[i-1] === null) continue;
+        const de = elev[i] - elev[i-1];
+        if (de > 0) gain += de;
+        else loss += -de;
+      }
+
+      statsEl.textContent =
+        `${distKm[distKm.length-1].toFixed(1)} km • ↑ ${Math.round(gain)} m • ↓ ${Math.round(loss)} m • ${Math.round(minE)}–${Math.round(maxE)} m • profile loaded ✅`;
+
+      function resizeCanvas() {
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+        return { dpr, W: rect.width, H: rect.height };
+      }
+
+      function draw(cursorIdx = null) {
+        const { dpr, W, H } = resizeCanvas();
+        const ctx = canvas.getContext("2d");
+
+        // draw in CSS pixels
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // padding (CSS px)
+        const padL = 46, padR = 12, padT = 12, padB = 26;
+        const plotW = W - padL - padR;
+        const plotH = H - padT - padB;
+
+        ctx.clearRect(0, 0, W, H);
+
+        // subtle grid (so you SEE it's drawn)
+        ctx.globalAlpha = 0.12;
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+          const y = padT + (i/4) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(padL + plotW, y);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+        // labels
+        ctx.globalAlpha = 0.7;
+        ctx.font = "12px system-ui, sans-serif";
+        ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
+        ctx.fillText(`${Math.round(minE)} m`, 8, padT + plotH);
+        ctx.fillText("0 km", padL, H - 6);
+        ctx.fillText(`${distKm[distKm.length-1].toFixed(1)} km`, padL + plotW - 44, H - 6);
+        ctx.globalAlpha = 1;
+
+        const totalKm = distKm[distKm.length-1] || 1;
+        const xFor = i => padL + (distKm[i] / totalKm) * plotW;
+        const yForE = e => {
+          const t = (e - minE) / ((maxE - minE) || 1);
+          return padT + (1 - t) * plotH;
+        };
+
+        // build path
+        let firstIdx = -1;
+        ctx.beginPath();
+        for (let i = 0; i < elev.length; i++) {
+          if (elev[i] === null) continue;
+          if (firstIdx === -1) firstIdx = i;
+          const x = xFor(i);
+          const y = yForE(elev[i]);
+          if (i === firstIdx) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+
+        // stroke
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // fill (unmistakable)
+        ctx.globalAlpha = 0.10;
+        ctx.lineTo(padL + plotW, padT + plotH);
+        ctx.lineTo(padL, padT + plotH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // cursor + dot
+        if (cursorIdx !== null) {
+          const e = elev[cursorIdx];
+          if (e !== null) {
+            const x = xFor(cursorIdx);
+            const y = yForE(e);
+
+            ctx.globalAlpha = 0.35;
+            ctx.beginPath();
+            ctx.moveTo(x, padT);
+            ctx.lineTo(x, padT + plotH);
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            ctx.globalAlpha = 1;
+
+            ctx.beginPath();
+            ctx.arc(x, y, 4.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // marker synced to profile
+      const hoverMarker = L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 }).addTo(map);
+
+      function nearestIndexFromX(clientX) {
+        const rect = canvas.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const padL = 46, padR = 12;
+        const plotW = rect.width - padL - padR;
+        const t = Math.max(0, Math.min(1, (x - padL) / (plotW || 1)));
+        const targetKm = t * (distKm[distKm.length-1] || 0);
+
+        let lo = 0, hi = distKm.length - 1;
+        while (hi - lo > 1) {
+          const mid = (lo + hi) >> 1;
+          if (distKm[mid] < targetKm) lo = mid;
+          else hi = mid;
+        }
+        return (Math.abs(distKm[hi] - targetKm) < Math.abs(distKm[lo] - targetKm)) ? hi : lo;
+      }
+
+      function updateTooltip(idx, clientX, clientY) {
+        const e = elev[idx];
+        const d = distKm[idx];
+        if (e === null) return;
+
+        tooltip.style.display = "block";
+        tooltip.innerHTML = `${d.toFixed(2)} km • ${Math.round(e)} m`;
+
+        const wrapRect = elevWrap.getBoundingClientRect();
+        tooltip.style.left = `${clientX - wrapRect.left}px`;
+        tooltip.style.top  = `${clientY - wrapRect.top}px`;
+      }
+
+      canvas.addEventListener("mousemove", (ev) => {
+        const idx = nearestIndexFromX(ev.clientX);
+        draw(idx);
+        hoverMarker.setLatLng(latlngs[idx]);
+        updateTooltip(idx, ev.clientX, ev.clientY);
+      });
+
+      canvas.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+        draw(null);
+      });
+
+      draw(null);
+      window.addEventListener("resize", () => draw(null));
+    }
+
+    fetch(detailUrl)
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load GeoJSON (${r.status})`);
+        return r.json();
+      })
+      .then(gj => {
+        const geom = extractGeometry(gj);
+        if (!geom || !geom.coordinates) {
+          showError("Could not find geometry.coordinates in GeoJSON", { type: gj?.type, keys: Object.keys(gj || {}) });
+          return;
+        }
+
+        const points = flattenToPoints(geom.coordinates).filter(p => Array.isArray(p) && p.length >= 2);
+        if (points.length < 2) {
+          showError(`Not enough coordinate points to draw (got ${points.length})`, { geomType: geom.type });
+          return;
+        }
+
+        const latlngs = points.map(p => [Number(p[1]), Number(p[0])]);
+        if (!isFinite(latlngs[0][0]) || !isFinite(latlngs[0][1])) {
+          showError("Coordinates are not numeric (NaN). Check GeoJSON coordinate format.", { sample: points[0] });
+          return;
+        }
+
+        const line = L.polyline(latlngs, { weight: 4, opacity: 0.95 }).addTo(map);
+        map.fitBounds(line.getBounds().pad(0.18));
+
+        L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 })
+          .addTo(map).bindTooltip("Start");
+
+        L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, opacity: 1, fillOpacity: 0.9 })
+          .addTo(map).bindTooltip("End");
+
+        setupElevationProfile(points, latlngs);
+      })
+      .catch(err => showError(err.message || String(err)));
+  </script>
+</body>
+</html>
