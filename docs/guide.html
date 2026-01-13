@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Touring Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Your styles -->
+  <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/hero.css" />
+  <link rel="stylesheet" href="./css/book.css" />
+  <link rel="stylesheet" href="./css/map.css" />
+</head>
+
+<body>
+  <!-- Cover-page hero -->
+  <section class="hero" aria-label="Guidebook cover">
+    <div class="hero-bg"></div>
+
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="dot"></span>
+        <span>Sea to Sky • Touring Guide</span>
+        <span class="sep">•</span>
+        <span>Winter 2025/26</span>
+      </div>
+
+      <h2 class="hero-title">Touring Guide</h2>
+      <p class="hero-sub">
+        A map-linked guidebook with tracks, photos, and practical notes.
+      </p>
+
+      <div class="hero-cta">
+        <button class="hero-btn primary" id="ctaBrowse" type="button">Browse the book</button>
+        <button class="hero-btn" id="ctaMap" type="button">Jump to map</button>
+      </div>
+
+      <div class="hero-toc" role="navigation" aria-label="Quick regions">
+        <button class="toc-chip" type="button" data-q="Duffey">Duffey</button>
+        <button class="toc-chip" type="button" data-q="Whistler">Whistler</button>
+        <button class="toc-chip" type="button" data-q="Sea to Sky">Sea to Sky</button>
+        <button class="toc-chip" type="button" data-q="Coast">Coast</button>
+        <span class="toc-hint">Tip: click a region to filter</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Header / filters -->
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <h1>Touring Guide</h1>
+        <p>Scan the book • click the map • open tours in a new tab</p>
+      </div>
+
+      <div class="controls">
+        <input id="q" placeholder="Search title / region…" />
+        <select id="difficulty">
+          <option value="">All difficulties</option>
+          <option value="easy">Easy</option>
+          <option value="moderate">Moderate</option>
+          <option value="hard">Hard</option>
+        </select>
+        <select id="activity">
+          <option value="">All activities</option>
+          <option value="ski_tour">Ski tour</option>
+          <option value="snowshoe">Snowshoe</option>
+          <option value="hike">Hike</option>
+        </select>
+        <button id="fit" type="button">Fit map to results</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main split -->
+  <main>
+    <section class="book">
+      <div class="bookhead">
+        <div><strong>Guidebook</strong></div>
+        <div class="count" id="count">Loading…</div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section class="mapwrap" id="map-section">
+      <div class="maphead">
+         <div><strong>Map</strong></div>
+         <div class="count">Click a line or marker → open tour</div>
+      </div>
+     <div id="map"></div>
+    </section>
+
+  </main>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="./js/main.js"></script>
+</body>
+</html>
