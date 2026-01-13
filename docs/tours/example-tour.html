@@ -77,9 +77,8 @@ const baseLayers = {
   "Street": openStreet
 };
 
-L.control.layers(baseLayers, null, {
-  collapsed: true
-}).addTo(map);
+L.control.layers(baseLayers, null, { collapsed: false }).addTo(map);
+
 
 // Optional: start marker (placeholder)
 L.marker([50.12, -122.95]).addTo(map).bindPopup("Start");
