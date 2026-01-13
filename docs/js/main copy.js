@@ -3,13 +3,10 @@
   // Adjust if needed:
   const DATA_URL = new URL("./data/tours.geojson", document.baseURI).href;
 
+
   let map;
   let allFeatures = [];
   let geoLayer = null;
-
-  // Basemap layers
-  let openTopo = null;
-  let openStreet = null;
 
   function $(id) {
     return document.getElementById(id);
@@ -25,30 +22,23 @@
     window.open(url, "_blank", "noopener,noreferrer");
   }
 
-  // Direction -> color (supports typo 'direcrtion' too)
-  function trackColorFromProps(p) {
-    const d = norm(p?.direction || p?.direcrtion || "");
-    if (d === "up" || d === "ascent") return "#1f6feb"; // blue
-    if (d === "down" || d === "descent") return "#b64a4a"; // calm red
-    if (d === "traverse" || d === "cross") return "#b000b5"; // magenta
-    return "#1f6feb";
-  }
+ function passesFilters(p) {
+  const q = norm($("q")?.value);
+  const prov = norm($("province")?.value);
+  const reg = norm($("region")?.value);
 
-  function passesFilters(p) {
-    const q = norm($("q")?.value);
-    const prov = norm($("province")?.value);
-    const reg = norm($("region")?.value);
+  const hay =
+    `${norm(p.title)} ${norm(p.region)} ${norm(p.province)} ${norm(p.subtitle)} ${norm(p.country)}`;
 
-    const hay =
-      `${norm(p.title)} ${norm(p.region)} ${norm(p.province)} ${norm(p.subtitle)} ${norm(p.country)}`;
+  if (q && !hay.includes(q)) return false;
 
-    if (q && !hay.includes(q)) return false;
+  if (prov && norm(p.province) !== prov) return false;
+  if (reg && norm(p.region) !== reg) return false;
 
-    if (prov && norm(p.province) !== prov) return false;
-    if (reg && norm(p.region) !== reg) return false;
+  return true;
+}
 
-    return true;
-  }
+
 
   function renderCards(features) {
     const grid = $("grid");
@@ -127,35 +117,14 @@
     const fc = { type: "FeatureCollection", features };
 
     geoLayer = L.geoJSON(fc, {
-      // Style line features by direction
-      style: (feature) => {
-        const p = feature?.properties || {};
-        const color = trackColorFromProps(p);
-        return { color, weight: 4, opacity: 0.9 };
-      },
-
-      // Style point features (if any) by direction
-      pointToLayer: (feature, latlng) => {
-        const p = feature?.properties || {};
-        const color = trackColorFromProps(p);
-        return L.circleMarker(latlng, {
-          radius: 7,
-          weight: 2,
-          opacity: 0.95,
-          fillOpacity: 0.85,
-          color,
-          fillColor: color,
-        });
-      },
-
+      style: () => ({ weight: 4, opacity: 0.9 }),
+      pointToLayer: (feature, latlng) =>
+        L.circleMarker(latlng, { radius: 7, weight: 2, opacity: 0.9 }),
       onEachFeature: (feature, layer) => {
         const p = feature.properties || {};
-        const dir = p.direction || p.direcrtion || "";
-
         const html =
           `<b>${p.title ?? p.slug ?? "Tour"}</b>` +
           (p.region ? `<br>${p.region}` : "") +
-          (dir ? `<br>${dir}` : "") +
           (p.vert_m != null ? `<br>Vert: ${p.vert_m} m` : "") +
           (p.distance_km != null ? `<br>Dist: ${p.distance_km} km` : "") +
           (p.gpx ? `<br><a href="${p.gpx}" target="_blank" rel="noopener">Download GPX</a>` : "");
@@ -167,32 +136,35 @@
   }
 
   function uniqSorted(arr) {
-    return Array.from(new Set(arr.filter(Boolean))).sort((a, b) =>
-      a.localeCompare(b, undefined, { sensitivity: "base" })
-    );
+  return Array.from(new Set(arr.filter(Boolean))).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
+
+function populateSelect(id, values, allLabel) {
+  const el = $(id);
+  if (!el) return;
+
+  // preserve current selection if possible
+  const current = el.value;
+
+  el.innerHTML = "";
+  const optAll = document.createElement("option");
+  optAll.value = "";
+  optAll.textContent = allLabel;
+  el.appendChild(optAll);
+
+  for (const v of values) {
+    const opt = document.createElement("option");
+    opt.value = v;          // keep raw value
+    opt.textContent = v;    // display label
+    el.appendChild(opt);
   }
 
-  function populateSelect(id, values, allLabel) {
-    const el = $(id);
-    if (!el) return;
+  // restore selection if still valid
+  if (values.includes(current)) el.value = current;
+}
 
-    const current = el.value;
-
-    el.innerHTML = "";
-    const optAll = document.createElement("option");
-    optAll.value = "";
-    optAll.textContent = allLabel;
-    el.appendChild(optAll);
-
-    for (const v of values) {
-      const opt = document.createElement("option");
-      opt.value = v;
-      opt.textContent = v;
-      el.appendChild(opt);
-    }
-
-    if (values.includes(current)) el.value = current;
-  }
 
   function applyFiltersAndRender() {
     const filtered = allFeatures.filter((f) => passesFilters(f.properties || {}));
@@ -207,8 +179,6 @@
 
     $("ctaMap")?.addEventListener("click", () => {
       document.querySelector(".mapwrap")?.scrollIntoView({ behavior: "smooth", block: "start" });
-      // If the map is below the fold, Leaflet sometimes needs a size refresh after smooth scroll
-      setTimeout(() => map?.invalidateSize?.(), 350);
     });
 
     document.querySelectorAll(".toc-chip").forEach((btn) => {
@@ -226,6 +196,7 @@
     $("q")?.addEventListener("input", applyFiltersAndRender);
     $("province")?.addEventListener("change", applyFiltersAndRender);
     $("region")?.addEventListener("change", applyFiltersAndRender);
+
 
     $("fit")?.addEventListener("click", () => {
       if (!geoLayer) return;
@@ -247,18 +218,18 @@
       }
       const gj = await res.json();
       allFeatures = (gj.features || []).filter(Boolean);
-
       // Build filter option lists from the data
-      const props = allFeatures.map((f) => f.properties || {});
-      const provinces = uniqSorted(props.map((p) => p.province).map(String));
-      const regions = uniqSorted(props.map((p) => p.region).map(String));
+      const props = allFeatures.map(f => f.properties || {});
+      const provinces    = uniqSorted(props.map(p => p.province).map(String));
+      const regions      = uniqSorted(props.map(p => p.region).map(String));
+
 
       populateSelect("province", provinces, "All provinces");
       populateSelect("region", regions, "All regions");
 
       applyFiltersAndRender();
 
-      // initial fit (all tours)
+      // initial fit
       if (allFeatures.length) {
         try {
           const tmp = L.geoJSON(gj);
@@ -276,22 +247,10 @@
   function initMap() {
     map = L.map("map", { zoomControl: true }).setView([50.12, -122.95], 9);
 
-    // Base layers
-    openTopo = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-      maxZoom: 17,
-      attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap",
-    });
-
-    openStreet = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
       attribution: "&copy; OpenStreetMap contributors",
-    });
-
-    // Default: OpenTopo
-    openTopo.addTo(map);
-
-    // Layer control (top-right)
-    L.control.layers({ Topo: openTopo, Street: openStreet }, null, { collapsed: true }).addTo(map);
+    }).addTo(map);
   }
 
   document.addEventListener("DOMContentLoaded", () => {

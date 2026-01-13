@@ -18,11 +18,9 @@
 <body>
   <!-- Cover-page hero -->
   <section class="hero hero--guide" aria-label="Guidebook intro">
-
     <div class="hero-media">
-  <img src="./assets/cover.jpg" alt="Touring Guide Cover">
-</div>
-
+      <img src="./assets/cover.jpg" alt="Touring Guide Cover">
+    </div>
 
     <div class="hero-inner">
       <div class="hero-badge">
@@ -34,19 +32,19 @@
 
       <h2 class="hero-title">Ski Touring Guide</h2>
       <p class="hero-sub">
-            This map-linked ski touring guide brings together GPX tracks, photos, and practical notes in one place.
-            I created it after finding it surprisingly difficult to locate concise, route-specific GPX information without endlessly scrolling through scattered trip reports.
-            These routes reflect personal experiences and are not guaranteed to represent the best or safest approach under all conditions.
-            Cheers Machtl
-            <br><br>
-            <b>Always assess current local conditions and consult the avalanche forecast before heading out.</b>
+        This map-linked ski touring guide brings together GPX tracks, photos, and practical notes in one place.
+        I created it after finding it surprisingly difficult to locate concise, route-specific GPX information without endlessly scrolling through scattered trip reports.
+        These routes reflect personal experiences and are not guaranteed to represent the best or safest approach under all conditions.
+        Cheers Machtl
+        <br><br>
+        <b>Always assess current local conditions and consult the avalanche forecast before heading out.</b>
       </p>
 
       <div class="hero-cta">
         <button class="hero-btn primary" id="ctaBrowse" type="button">Browse the book</button>
         <button class="hero-btn" id="ctaMap" type="button">Jump to map</button>
       </div>
-
+    </div>
   </section>
 
   <!-- Header / filters -->
@@ -60,14 +58,13 @@
       <div class="controls">
         <input id="q" placeholder="Search title / region…" />
         <select id="province">
-         <option value="">All provinces</option>
+          <option value="">All provinces</option>
         </select>
 
-      <select id="region">
-        <option value="">All regions</option>
-      </select>
+        <select id="region">
+          <option value="">All regions</option>
+        </select>
 
-        
         <button id="fit" type="button">Fit map to results</button>
       </div>
     </div>
@@ -85,16 +82,121 @@
 
     <section class="mapwrap" id="map-section">
       <div class="maphead">
-         <div><strong>Map</strong></div>
-         <div class="count">Click a line or marker → open tour</div>
+        <div><strong>Map</strong></div>
+        <div class="count">Click a line or marker → open tour</div>
       </div>
-     <div id="map"></div>
+      <div id="map"></div>
     </section>
-
   </main>
 
   <!-- Scripts -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="./js/main.js"></script>
+
+  <script>
+    // ---- Basemap setup ----
+    const map = L.map("map", { zoomControl: true });
+
+    const openTopo = L.tileLayer(
+      "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+      { maxZoom: 17, attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap" }
+    );
+
+    const openStreet = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
+    );
+
+    openTopo.addTo(map);
+    L.control.layers({ "Topo": openTopo, "Street": openStreet }, null, { collapsed: true }).addTo(map);
+
+    // Fallback
+    map.setView([50.0, -123.0], 7);
+
+    // ---- Direction → color ----
+    function trackColorFromDirection(direction) {
+      const d = String(direction || "").toLowerCase().trim();
+      if (d === "up" || d === "ascent") return "#1f6feb";       // blue
+      if (d === "down" || d === "descent") return "#b64a4a";    // calm red
+      if (d === "traverse" || d === "cross") return "#b000b5";  // magenta
+      return "#1f6feb";
+    }
+
+    // ---- Load overview GeoJSON ----
+    const GEOJSON_URL = "./data/tours.geojson";
+    let toursLayer = null;
+
+    fetch(GEOJSON_URL)
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load ${GEOJSON_URL} (${r.status})`);
+        return r.json();
+      })
+      .then(gj => {
+        // Draw features with style based on properties.direction (or typo "direcrtion")
+        toursLayer = L.geoJSON(gj, {
+          style: (feature) => {
+            const p = feature?.properties || {};
+            const dir = p.direction || p.direcrtion || "";
+            return {
+              color: trackColorFromDirection(dir),
+              weight: 3,
+              opacity: 0.95
+            };
+          },
+          pointToLayer: (feature, latlng) => {
+            const p = feature?.properties || {};
+            const dir = p.direction || p.direcrtion || "";
+            const c = trackColorFromDirection(dir);
+            return L.circleMarker(latlng, {
+              radius: 5,
+              weight: 2,
+              opacity: 1,
+              fillOpacity: 0.9,
+              color: c,
+              fillColor: c
+            });
+          },
+          onEachFeature: (feature, layer) => {
+            const p = feature?.properties || {};
+            const page = p.page || p.url || "";
+
+            // Click opens tour page
+            if (page) {
+              layer.on("click", () => window.open(page, "_blank"));
+            }
+
+            // Tooltip
+            const title = p.title || p.slug || "Tour";
+            const dir = p.direction || p.direcrtion || "";
+            layer.bindTooltip(`${title}${dir ? " • " + dir : ""}`);
+          }
+        }).addTo(map);
+
+        // Fit to all tours
+        try {
+          const b = toursLayer.getBounds();
+          if (b.isValid()) map.fitBounds(b.pad(0.15));
+        } catch (_) {}
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Could not load tours.geojson. Check console for details.");
+      });
+
+    // ---- Fit button ----
+    document.getElementById("fit")?.addEventListener("click", () => {
+      if (!toursLayer) return;
+      const b = toursLayer.getBounds();
+      if (b.isValid()) map.fitBounds(b.pad(0.15));
+    });
+
+    // ---- Hero buttons (optional scroll helpers) ----
+    document.getElementById("ctaMap")?.addEventListener("click", () => {
+      document.getElementById("map-section")?.scrollIntoView({ behavior: "smooth" });
+      setTimeout(() => map.invalidateSize(), 350);
+    });
+    document.getElementById("ctaBrowse")?.addEventListener("click", () => {
+      document.querySelector(".book")?.scrollIntoView({ behavior: "smooth" });
+    });
+  </script>
 </body>
 </html>
