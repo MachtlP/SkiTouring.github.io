@@ -1,10 +1,389 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>My GitHub Page</title>
+  <meta charset="utf-8" />
+  <title>Touring Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: rgba(255,255,255,0.06);
+      --panel2: rgba(255,255,255,0.10);
+      --text: rgba(255,255,255,0.92);
+      --muted: rgba(255,255,255,0.70);
+      --border: rgba(255,255,255,0.10);
+      --shadow: 0 18px 40px rgba(0,0,0,0.45);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, rgba(96,165,250,0.15), transparent 60%),
+                  radial-gradient(900px 700px at 80% 20%, rgba(34,197,94,0.12), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      padding: 18px 18px 10px 18px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      letter-spacing: 0.2px;
+    }
+    .brand p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .controls input, .controls select {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      outline: none;
+      min-width: 180px;
+    }
+    .controls button {
+      background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.06));
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    .controls button:hover { background: var(--panel2); }
+
+    main {
+      padding: 0 18px 18px 18px;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 14px;
+      height: calc(100vh - 92px);
+    }
+
+    .book {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 360px;
+    }
+    .bookhead {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .bookhead .count { color: var(--muted); font-size: 13px; }
+    .grid {
+      padding: 14px;
+      overflow: auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+      background: rgba(0,0,0,0.15);
+      display: grid;
+      grid-template-rows: 150px auto;
+      cursor: pointer;
+      transition: transform 0.08s ease, background 0.08s ease;
+    }
+    .card:hover { transform: translateY(-2px); background: rgba(255,255,255,0.05); }
+    .cover {
+      width: 100%;
+      height: 150px;
+      background: rgba(255,255,255,0.05);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .meta { padding: 12px; display: grid; gap: 7px; }
+    .title { font-size: 15px; font-weight: 650; line-height: 1.2; margin: 0; }
+    .subtitle { font-size: 12.5px; color: var(--muted); margin: 0; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+    .chip {
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.86);
+    }
+
+    .mapwrap {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      min-height: 360px;
+    }
+    .maphead {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    #map { width: 100%; height: 100%; min-height: 320px; }
+
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; height: auto; }
+      #map { min-height: 380px; }
+      .controls input, .controls select { min-width: 140px; }
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Hello GitHub Pages 👋</h1>
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <h1>Touring Guide</h1>
+        <p>Scan the book • click the map • open tours in a new tab</p>
+      </div>
+
+      <div class="controls">
+        <input id="q" placeholder="Search title / region…" />
+        <select id="difficulty">
+          <option value="">All difficulties</option>
+          <option value="easy">Easy</option>
+          <option value="moderate">Moderate</option>
+          <option value="hard">Hard</option>
+        </select>
+        <select id="activity">
+          <option value="">All activities</option>
+          <option value="ski_tour">Ski tour</option>
+          <option value="snowshoe">Snowshoe</option>
+          <option value="hike">Hike</option>
+        </select>
+        <button id="fit">Fit map to results</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="book">
+      <div class="bookhead">
+        <div><strong>Guidebook</strong></div>
+        <div class="count" id="count">Loading…</div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section class="mapwrap">
+      <div class="maphead">
+        <div><strong>Map</strong></div>
+        <div class="count">Click a line or marker → open tour</div>
+      </div>
+      <div id="map"></div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const DATA_URL = "./data/tours.geojson";
+
+    const map = L.map("map", { zoomControl: true }).setView([50.12, -122.95], 9);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    let allFeatures = [];
+    let geoLayer = null;
+
+    function norm(s) { return (s ?? "").toString().trim().toLowerCase(); }
+
+    function passesFilters(p) {
+      const q = norm(document.getElementById("q").value);
+      const diff = norm(document.getElementById("difficulty").value);
+      const act = norm(document.getElementById("activity").value);
+
+      const hay = `${norm(p.title)} ${norm(p.region)} ${norm(p.subtitle)} ${norm(p.activity)} ${norm(p.difficulty)}`;
+      if (q && !hay.includes(q)) return false;
+      if (diff && norm(p.difficulty) !== diff) return false;
+      if (act && norm(p.activity) !== act) return false;
+      return true;
+    }
+
+    function openTour(p) {
+      const url = p.page || (p.slug ? `./tours/${p.slug}.html` : null);
+      if (!url) return;
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+
+    function renderCards(features) {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+
+      for (const f of features) {
+        const p = f.properties || {};
+        const card = document.createElement("div");
+        card.className = "card";
+        card.onclick = () => openTour(p);
+
+        const cover = document.createElement("div");
+        cover.className = "cover";
+        if (p.cover) {
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.alt = p.title || "Tour cover";
+          img.src = p.cover;
+          cover.appendChild(img);
+        } else {
+          cover.textContent = "No cover";
+        }
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+
+        const title = document.createElement("p");
+        title.className = "title";
+        title.textContent = p.title || p.slug || "Untitled tour";
+
+        const subtitle = document.createElement("p");
+        subtitle.className = "subtitle";
+        subtitle.textContent = p.region || p.subtitle || "";
+
+        const chips = document.createElement("div");
+        chips.className = "chips";
+
+        function chip(text) {
+          if (!text) return;
+          const c = document.createElement("span");
+          c.className = "chip";
+          c.textContent = text;
+          chips.appendChild(c);
+        }
+
+        chip(p.activity);
+        chip(p.difficulty);
+        if (p.vert_m != null) chip(`${p.vert_m} m`);
+        if (p.distance_km != null) chip(`${p.distance_km} km`);
+
+        meta.appendChild(title);
+        if (subtitle.textContent) meta.appendChild(subtitle);
+        meta.appendChild(chips);
+
+        card.appendChild(cover);
+        card.appendChild(meta);
+        grid.appendChild(card);
+      }
+
+      document.getElementById("count").textContent = `${features.length} tours shown`;
+    }
+
+    function renderMap(features) {
+      if (geoLayer) map.removeLayer(geoLayer);
+
+      geoLayer = L.geoJSON(
+        { type: "FeatureCollection", features },
+        {
+          style: () => ({ weight: 4, opacity: 0.9 }),
+          pointToLayer: (feature, latlng) => L.circleMarker(latlng, { radius: 7, weight: 2, opacity: 0.9 }),
+          onEachFeature: (feature, layer) => {
+            const p = feature.properties || {};
+            const html =
+              `<b>${p.title ?? p.slug ?? "Tour"}</b>` +
+              (p.region ? `<br>${p.region}` : "") +
+              (p.vert_m != null ? `<br>Vert: ${p.vert_m} m` : "") +
+              (p.distance_km != null ? `<br>Dist: ${p.distance_km} km` : "") +
+              (p.gpx ? `<br><a href="${p.gpx}" target="_blank" rel="noopener">Download GPX</a>` : "");
+            layer.bindPopup(html);
+            layer.on("click", () => openTour(p));
+          }
+        }
+      ).addTo(map);
+    }
+
+    function apply() {
+      const filtered = allFeatures.filter(f => passesFilters(f.properties || {}));
+      renderCards(filtered);
+      renderMap(filtered);
+    }
+
+    document.getElementById("q").addEventListener("input", apply);
+    document.getElementById("difficulty").addEventListener("change", apply);
+    document.getElementById("activity").addEventListener("change", apply);
+    document.getElementById("fit").addEventListener("click", () => {
+      if (!geoLayer) return;
+      try { map.fitBounds(geoLayer.getBounds().pad(0.15)); } catch {}
+    });
+
+    async function main() {
+      const res = await fetch(DATA_URL, { cache: "no-store" });
+      if (!res.ok) {
+        document.getElementById("count").textContent = `Failed to load ${DATA_URL}`;
+        return;
+      }
+      const gj = await res.json();
+      allFeatures = (gj.features || []).filter(Boolean);
+
+      apply();
+      // initial fit
+      if (allFeatures.length) {
+        try {
+          const tmp = L.geoJSON(gj);
+          map.fitBounds(tmp.getBounds().pad(0.15));
+        } catch {}
+      }
+    }
+
+    main();
+  </script>
 </body>
 </html>
