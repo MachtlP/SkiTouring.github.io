@@ -348,17 +348,25 @@
           else ctx.lineTo(x, y);
         }
 
+        // --- STYLE (high visibility) ---
+        ctx.strokeStyle = "#111";     // dark line
+        ctx.fillStyle   = "#111";     // fill under the line
+        ctx.lineWidth   = 4;          // thicker line
+        ctx.lineJoin    = "round";
+        ctx.lineCap     = "round";
+
         // stroke
-        ctx.lineWidth = 3;
+        ctx.globalAlpha = 1;
         ctx.stroke();
 
-        // fill (unmistakable)
-        ctx.globalAlpha = 0.10;
+          // fill under the line (stronger)
+        ctx.globalAlpha = 0.28;
         ctx.lineTo(padL + plotW, padT + plotH);
         ctx.lineTo(padL, padT + plotH);
         ctx.closePath();
         ctx.fill();
         ctx.globalAlpha = 1;
+
 
         // cursor + dot
         if (cursorIdx !== null) {
