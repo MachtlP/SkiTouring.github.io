@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{TITLE}} • Touring Guide</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Base styles (already in your project) -->
+  <link rel="stylesheet" href="../css/base.css" />
+  <link rel="stylesheet" href="../css/book.css" />
+  <link rel="stylesheet" href="../css/map.css" />
+  <link rel="stylesheet" href="../css/tour.css" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+
+<body>
+  <main class="tour-wrap">
+
+    <!-- Top navigation -->
+    <nav class="tour-nav">
+      <a href="../guide.html">← Back to guide</a>
+      <a href="{{GPX_URL}}" download class="btn">Download GPX</a>
+    </nav>
+
+    <!-- Header -->
+    <header class="tour-header">
+      <h1 class="tour-title">{{TITLE}}</h1>
+      <p class="tour-sub">{{PROVINCE}} • {{REGION}}</p>
+    </header>
+
+    <!-- Map -->
+    <section class="tour-map">
+      <div id="map"></div>
+    </section>
+
+    <!-- Content -->
+    <section class="tour-content">
+      {{CONTENT_HTML}}
+    </section>
+
+  </main>
+
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Inline geometry (self-contained page) -->
+  <script>
+    const TOUR_COORDS = {{COORDS_JSON}};
+    const TOUR_TITLE  = {{TITLE_JSON}};
+  </script>
+
+  <!-- Minimal map boot -->
+  <script>
+    const map = L.map("map", { zoomControl: true });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+
+    if (Array.isArray(TOUR_COORDS) && TOUR_COORDS.length > 1) {
+      const line = L.polyline(
+        TOUR_COORDS.map(c => [c[1], c[0]]),
+        { weight: 4 }
+      ).addTo(map);
+
+      map.fitBounds(line.getBounds().pad(0.18));
+    } else {
+      map.setView([50.0, -123.0], 7);
+    }
+  </script>
+</body>
+</html>
