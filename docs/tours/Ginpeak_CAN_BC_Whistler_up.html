@@ -43,7 +43,7 @@
 <p>Write content only — metadata comes from tours.geojson.</p>
 <p>--&gt;</p>
 <h1>Overview</h1>
-<p>One paragraph summary: what this tour is, why it’s good, and the “headline” route idea.</p>
+<p>TODO</p>
 <h2>Quick facts</h2>
 <ul>
 <li><strong>Start / trailhead:</strong> TODO</li>
@@ -54,15 +54,15 @@
 <li><strong>Group size / parking:</strong> TODO</li>
 </ul>
 <h1>Access</h1>
-<p>Describe parking, approach to trailhead, permits/closures, and any common access pitfalls.</p>
+<p>TODO</p>
 <h1>Route</h1>
 <h2>Ascent</h2>
-<p>Step-by-step route description. Mention key terrain decisions and safe travel tactics.</p>
+<p>TODO</p>
 <h2>Descent</h2>
-<p>Main descent option(s). Mention common variants and where people get pulled into wrong terrain.</p>
+<p>TODO</p>
 <h1>Avalanche terrain &amp; hazards</h1>
 <ul>
-<li><strong>Avalanche problems to watch:</strong> TODO (storm slab, persistent slab, wind slab, cornice, etc.)</li>
+<li><strong>Avalanche problems to watch:</strong> TODO</li>
 <li><strong>Terrain traps:</strong> TODO</li>
 <li><strong>Common “gotchas”:</strong> TODO</li>
 <li><strong>Notes on safe options / bail-outs:</strong> TODO</li>
@@ -75,15 +75,10 @@
 </ul>
 <h1>Variants</h1>
 <ul>
-<li>Variant A: TODO</li>
-<li>Variant B: TODO</li>
+<li>Not outlined yet</li>
 </ul>
 <h1>Photos</h1>
 <p>&gt; Add photos by dropping images into `docs/photos/Ginpeak_CAN_BC_Whistler_up/`.</p>
-<p>&gt;</p>
-<p>&gt; Recommended:</p>
-<p>&gt; - `cover.jpg` (used in guide + tour page)</p>
-<p>&gt; - `01.jpg`, `02.jpg`, … for gallery</p>
 <p>Optional captions:</p>
 <ul>
 <li>`01.jpg` — TODO caption</li>
@@ -92,10 +87,8 @@
 <h1>References / links</h1>
 <ul>
 <li><a href="https://example.com">Link title</a></li>
-<li><a href="https://example.com">Forecast region</a></li>
+<li><a href="https://avalanche.ca/">Avalanche Canada</a></li>
 </ul>
-<h1>Personal notes</h1>
-<p>Anything you want to remember for next time (track quirks, good turns, navigation notes, etc.).</p>
 <p>---</p>
 <p><strong>Disclaimer:</strong> This is a personal route note, not a guarantee of safety. Always assess current conditions and consult the avalanche bulletin.</p>
     </section>
@@ -122,7 +115,7 @@
 
     if (Array.isArray(TOUR_COORDS) && TOUR_COORDS.length > 1) {
       const line = L.polyline(
-        TOUR_COORDS.map(c => [c[1], c[0]]),
+        TOUR_COORDS,
         { weight: 4 }
       ).addTo(map);
 

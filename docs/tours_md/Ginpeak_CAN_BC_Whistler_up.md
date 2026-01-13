@@ -5,7 +5,7 @@ Write content only — metadata comes from tours.geojson.
 -->
 
 # Overview
-One paragraph summary: what this tour is, why it’s good, and the “headline” route idea.
+TODO
 
 ## Quick facts
 - **Start / trailhead:** TODO
@@ -16,17 +16,17 @@ One paragraph summary: what this tour is, why it’s good, and the “headline�
 - **Group size / parking:** TODO
 
 # Access
-Describe parking, approach to trailhead, permits/closures, and any common access pitfalls.
+TODO
 
 # Route
 ## Ascent
-Step-by-step route description. Mention key terrain decisions and safe travel tactics.
+TODO
 
 ## Descent
-Main descent option(s). Mention common variants and where people get pulled into wrong terrain.
+TODO 
 
 # Avalanche terrain & hazards
-- **Avalanche problems to watch:** TODO (storm slab, persistent slab, wind slab, cornice, etc.)
+- **Avalanche problems to watch:** TODO 
 - **Terrain traps:** TODO
 - **Common “gotchas”:** TODO
 - **Notes on safe options / bail-outs:** TODO
@@ -37,15 +37,11 @@ Main descent option(s). Mention common variants and where people get pulled into
 - Any micro-weather notes (wind loading zones, sun hits early, etc.)
 
 # Variants
-- Variant A: TODO
-- Variant B: TODO
+- Not outlined yet
 
 # Photos
 > Add photos by dropping images into `docs/photos/Ginpeak_CAN_BC_Whistler_up/`.
->
-> Recommended:
-> - `cover.jpg` (used in guide + tour page)
-> - `01.jpg`, `02.jpg`, … for gallery
+
 
 Optional captions:
 - `01.jpg` — TODO caption
@@ -53,10 +49,9 @@ Optional captions:
 
 # References / links
 - [Link title](https://example.com)
-- [Forecast region](https://example.com)
+- [Avalanche Canada](https://avalanche.ca/)
 
-# Personal notes
-Anything you want to remember for next time (track quirks, good turns, navigation notes, etc.).
+
 
 ---
 

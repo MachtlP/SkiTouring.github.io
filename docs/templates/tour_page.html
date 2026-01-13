@@ -62,7 +62,7 @@
 
     if (Array.isArray(TOUR_COORDS) && TOUR_COORDS.length > 1) {
       const line = L.polyline(
-        TOUR_COORDS.map(c => [c[1], c[0]]),
+        TOUR_COORDS,
         { weight: 4 }
       ).addTo(map);
 
