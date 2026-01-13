@@ -301,3 +301,40 @@
     animation: none !important;
   }
 }
+
+/* =========================
+   GUIDE HERO (compact banner)
+   Crops image to content-like height
+   ========================= */
+
+.hero--guide .hero-media{
+  height: 380px;            /* tweak: 320–420px usually feels right */
+}
+
+.hero--guide .hero-img{
+  height: 100%;
+  width: 100%;
+  object-fit: cover;        /* CROPS (instead of contain) */
+  object-position: center;  /* tweak if needed: center 35% etc */
+}
+
+/* tighten overlay spacing a bit on guide */
+.hero--guide .hero-inner{
+  padding: 20px;
+}
+
+/* make title+text feel like an intro, not a cover */
+.hero--guide .hero-top{
+  margin-top: 14px;
+}
+
+.hero--guide .hero-sub{
+  max-width: 70ch;
+}
+
+/* responsive: keep it compact on phones */
+@media (max-width: 980px){
+  .hero--guide .hero-media{
+    height: 320px;
+  }
+}
