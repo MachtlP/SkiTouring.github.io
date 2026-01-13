@@ -1,0 +1,105 @@
+/* =========================
+   TOUR PAGE
+   ========================= */
+
+.tour-wrap{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+/* -------------------------
+   NAV
+   ------------------------- */
+
+.tour-nav{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tour-nav a{
+  text-decoration: none;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+
+.tour-nav a:hover{
+  background: rgba(255,255,255,0.14);
+}
+
+/* -------------------------
+   HEADER
+   ------------------------- */
+
+.tour-header{
+  text-align: center;
+  padding: 18px 12px;
+}
+
+.tour-title{
+  margin: 0;
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.1;
+}
+
+.tour-sub{
+  margin: 6px 0 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* -------------------------
+   MAP
+   ------------------------- */
+
+.tour-map{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+#map{
+  height: 420px;
+}
+
+/* -------------------------
+   CONTENT
+   ------------------------- */
+
+.tour-content{
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255,255,255,0.06);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.tour-content h2{
+  margin-top: 0;
+}
+
+.tour-content h2,
+.tour-content h3{
+  margin-bottom: 6px;
+}
+
+.tour-content p{
+  line-height: 1.55;
+  color: rgba(255,255,255,0.90);
+}
+
+.tour-content ul{
+  padding-left: 18px;
+}
+
+@media (max-width: 900px){
+  #map{ height: 320px; }
+}
