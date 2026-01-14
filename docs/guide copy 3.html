@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Ski Touring Guide – Map</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <!-- Optional base styles -->
+  <link rel="stylesheet" href="./css/base.css" />
+
+  <style>
+    body { margin: 0; }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: #fff;
+      border-bottom: 1px solid rgba(0,0,0,0.12);
+      padding: 10px 12px;
+    }
+    .bar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .title { font-weight: 800; }
+    .hint { opacity: 0.8; font-size: 0.95rem; }
+    .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .controls button{
+      border: 1px solid rgba(0,0,0,0.18);
+      background: #fff;
+      padding: 8px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    /* Map: keep it fast and visible */
+    #map { height: 72vh; width: 100%; }
+
+    /* Lightweight ToC */
+    .toc {
+      padding: 14px 12px 24px;
+      border-top: 1px solid rgba(0,0,0,0.10);
+      background: #fff;
+    }
+    .toc h2{
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      letter-spacing: 0.2px;
+    }
+    .toc small { opacity: 0.75; }
+
+    details.prov {
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 12px;
+      margin: 10px 0;
+      overflow: hidden;
+      background: #fff;
+    }
+    details.prov > summary{
+      cursor: pointer;
+      list-style: none;
+      padding: 10px 12px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      font-weight: 800;
+      user-select: none;
+    }
+    details.prov > summary::-webkit-details-marker { display: none; }
+    .prov-meta{
+      font-weight: 600;
+      opacity: 0.75;
+      font-size: 0.9rem;
+      white-space: nowrap;
+    }
+
+    .prov-list{
+      padding: 0 8px 10px;
+    }
+    .prov-list a{
+      display: block;
+      padding: 8px 10px;
+      border-radius: 10px;
+      text-decoration: none;
+      color: inherit;
+      border: 1px solid transparent;
+    }
+    .prov-list a:hover{
+      border-color: rgba(0,0,0,0.10);
+      background: rgba(0,0,0,0.03);
+    }
+    .tour-sub{
+      display:block;
+      font-size: 0.9rem;
+      opacity: 0.75;
+      margin-top: 2px;
+    }
+
+    .loading {
+      position: fixed;
+      left: 12px; bottom: 12px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid rgba(0,0,0,0.18);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font-size: 0.95rem;
+      z-index: 20;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <div class="bar">
+      <div>
+        <div class="title">Ski Touring Guide – Map</div>
+        <div class="hint">Click a line → open tour</div>
+      </div>
+      <div class="controls">
+        <button id="fit" type="button">Fit to tours</button>
+        <button id="jumpToc" type="button">Table of contents ↓</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="map"></div>
+  <div class="loading" id="loading">Loading tours…</div>
+
+  <!-- Lightweight “Table of contents” AFTER the map -->
+  <section class="toc" id="toc">
+    <h2>Table of contents <small>(by province)</small></h2>
+    <div id="tocRoot"></div>
+  </section>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    const GEOJSON_URL = "./data/tours.geojson";
+
+    function trackColorFromDirection(direction) {
+      const d = String(direction || "").toLowerCase().trim();
+      if (d === "up" || d === "ascent") return "#1f6feb";
+      if (d === "down" || d === "descent") return "#b64a4a";
+      if (d === "traverse" || d === "cross") return "#b000b5";
+      return "#1f6feb";
+    }
+
+    // ---- Map (OSM only, canvas for speed) ----
+    const openStreet = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
+    );
+
+    const map = L.map("map", {
+      zoomControl: true,
+      preferCanvas: true,
+      renderer: L.canvas(),
+      layers: [openStreet]
+    });
+    map.setView([50.0, -123.0], 7);
+
+    let toursLayer = null;
+    let toursData = null;
+
+    const loadingEl = document.getElementById("loading");
+    const tocRoot = document.getElementById("tocRoot");
+
+    function setLoading(text, show=true){
+      if (!loadingEl) return;
+      loadingEl.textContent = text;
+      loadingEl.style.display = show ? "block" : "none";
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "")
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    }
+
+    // ---- Build a SUPER lightweight ToC: Province -> Title ----
+    function renderTOC(gj){
+      if (!tocRoot) return;
+      const feats = (gj?.features || []).filter(f => {
+        const t = f?.geometry?.type;
+        return t === "LineString" || t === "MultiLineString";
+      });
+
+      // group by province
+      const byProv = new Map();
+      for (const f of feats){
+        const p = f?.properties || {};
+        const prov = (p.province || p.province_code || "Other").toString();
+        if (!byProv.has(prov)) byProv.set(prov, []);
+        byProv.get(prov).push(p);
+      }
+
+      // sort provinces
+      const provKeys = Array.from(byProv.keys()).sort((a,b) => a.localeCompare(b));
+
+      // build HTML (string concat is fastest)
+      let html = "";
+      for (const prov of provKeys){
+        const arr = byProv.get(prov) || [];
+
+        // sort titles within province
+        arr.sort((a,b) => String(a.title||a.slug||"").localeCompare(String(b.title||b.slug||"")));
+
+        const count = arr.length;
+        html += `
+          <details class="prov">
+            <summary>
+              <span>${escapeHtml(prov)}</span>
+              <span class="prov-meta">${count} tour${count===1?"":"s"}</span>
+            </summary>
+            <div class="prov-list">
+        `;
+
+        for (const p of arr){
+          const title = p.title || p.slug || "Tour";
+          const page  = p.page || p.url || "";
+          const region = p.region ? ` • ${p.region}` : "";
+          const dir = p.direction ? ` • ${p.direction}` : "";
+          const meta = `${region}${dir}`.trim();
+
+          if (page){
+            html += `
+              <a href="${escapeHtml(page)}" target="_blank" rel="noopener">
+                ${escapeHtml(title)}
+                ${meta ? `<span class="tour-sub">${escapeHtml(meta.replace(/^ • /,""))}</span>` : ""}
+              </a>
+            `;
+          } else {
+            html += `
+              <a href="javascript:void(0)" aria-disabled="true">
+                ${escapeHtml(title)}
+                ${meta ? `<span class="tour-sub">${escapeHtml(meta.replace(/^ • /,""))}</span>` : ""}
+              </a>
+            `;
+          }
+        }
+
+        html += `
+            </div>
+          </details>
+        `;
+      }
+
+      tocRoot.innerHTML = html;
+    }
+
+    // ---- Load + draw tours ----
+    function loadTours(){
+      setLoading("Loading tours…");
+      fetch(GEOJSON_URL, { cache: "force-cache" })
+        .then(r => {
+          if (!r.ok) throw new Error(`Failed to load ${GEOJSON_URL} (${r.status})`);
+          return r.json();
+        })
+        .then(gj => {
+          toursData = gj;
+
+          toursLayer = L.geoJSON(gj, {
+            filter: (feature) => {
+              const t = feature?.geometry?.type;
+              return t === "LineString" || t === "MultiLineString";
+            },
+            style: (feature) => {
+              const p = feature?.properties || {};
+              const dir = p.direction || p.direcrtion || "";
+              return { color: trackColorFromDirection(dir), weight: 3, opacity: 0.95 };
+            },
+            onEachFeature: (feature, layer) => {
+              const p = feature?.properties || {};
+              const page = p.page || p.url || "";
+              if (page) layer.on("click", () => window.open(page, "_blank"));
+
+              const title = p.title || p.slug || "Tour";
+              const dir = p.direction || p.direcrtion || "";
+              layer.bindTooltip(`${title}${dir ? " • " + dir : ""}`, { sticky: true });
+            }
+          }).addTo(map);
+
+          try {
+            const b = toursLayer.getBounds();
+            if (b.isValid()) map.fitBounds(b.pad(0.15));
+          } catch (_) {}
+
+          // Render ToC AFTER map is ready (keeps initial load snappy)
+          if ("requestIdleCallback" in window) {
+            requestIdleCallback(() => renderTOC(gj), { timeout: 1500 });
+          } else {
+            setTimeout(() => renderTOC(gj), 50);
+          }
+
+          setLoading("Loaded.", false);
+        })
+        .catch(err => {
+          console.error(err);
+          setLoading("Load error. Check console.", true);
+          alert("Could not load tours.geojson. Check console for details.");
+        });
+    }
+
+    loadTours();
+
+    // ---- Fit button ----
+    document.getElementById("fit")?.addEventListener("click", () => {
+      if (!toursLayer) return;
+      const b = toursLayer.getBounds();
+      if (b.isValid()) map.fitBounds(b.pad(0.15));
+    });
+
+    // ---- Jump to ToC ----
+    document.getElementById("jumpToc")?.addEventListener("click", () => {
+      document.getElementById("toc")?.scrollIntoView({ behavior: "smooth" });
+    });
+  </script>
+</body>
+</html>

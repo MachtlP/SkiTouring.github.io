@@ -2,107 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Ski Touring Guide – Map</title>
+  <title>Ski Touring Guide – 3D Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Leaflet -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
 
   <!-- Optional base styles -->
   <link rel="stylesheet" href="./css/base.css" />
 
   <style>
     body { margin: 0; }
-    header {
+    header{
       position: sticky; top: 0; z-index: 10;
-      background: #fff;
-      border-bottom: 1px solid rgba(0,0,0,0.12);
+      background:#fff;
+      border-bottom:1px solid rgba(0,0,0,0.12);
       padding: 10px 12px;
     }
-    .bar {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
+    .bar{
+      display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
     }
-    .title { font-weight: 800; }
-    .hint { opacity: 0.8; font-size: 0.95rem; }
-    .controls { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .title{ font-weight: 800; }
+    .hint{ opacity:0.8; font-size:0.95rem; }
+    .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
     .controls button{
-      border: 1px solid rgba(0,0,0,0.18);
-      background: #fff;
-      padding: 8px 10px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 600;
+      border:1px solid rgba(0,0,0,0.18);
+      background:#fff;
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
     }
+    .controls input[type="range"]{ width: 140px; }
 
-    /* Map: keep it fast and visible */
     #map { height: 72vh; width: 100%; }
 
-    /* Lightweight ToC */
-    .toc {
-      padding: 14px 12px 24px;
-      border-top: 1px solid rgba(0,0,0,0.10);
-      background: #fff;
-    }
-    .toc h2{
-      margin: 0 0 10px;
-      font-size: 1.05rem;
-      letter-spacing: 0.2px;
-    }
-    .toc small { opacity: 0.75; }
-
-    details.prov {
-      border: 1px solid rgba(0,0,0,0.12);
-      border-radius: 12px;
-      margin: 10px 0;
-      overflow: hidden;
-      background: #fff;
-    }
-    details.prov > summary{
-      cursor: pointer;
-      list-style: none;
-      padding: 10px 12px;
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 10px;
-      font-weight: 800;
-      user-select: none;
-    }
-    details.prov > summary::-webkit-details-marker { display: none; }
-    .prov-meta{
-      font-weight: 600;
-      opacity: 0.75;
-      font-size: 0.9rem;
-      white-space: nowrap;
-    }
-
-    .prov-list{
-      padding: 0 8px 10px;
-    }
-    .prov-list a{
-      display: block;
-      padding: 8px 10px;
-      border-radius: 10px;
-      text-decoration: none;
-      color: inherit;
-      border: 1px solid transparent;
-    }
-    .prov-list a:hover{
-      border-color: rgba(0,0,0,0.10);
-      background: rgba(0,0,0,0.03);
-    }
-    .tour-sub{
-      display:block;
-      font-size: 0.9rem;
-      opacity: 0.75;
-      margin-top: 2px;
-    }
-
-    .loading {
+    .loading{
       position: fixed;
       left: 12px; bottom: 12px;
       background: rgba(255,255,255,0.95);
@@ -112,6 +48,64 @@
       font-size: 0.95rem;
       z-index: 20;
     }
+
+    /* Lightweight ToC */
+    .toc{
+      padding: 14px 12px 24px;
+      border-top: 1px solid rgba(0,0,0,0.10);
+      background:#fff;
+    }
+    .toc h2{
+      margin: 0 0 10px;
+      font-size: 1.05rem;
+      letter-spacing: 0.2px;
+    }
+    .toc small{ opacity:0.75; }
+
+    details.prov{
+      border:1px solid rgba(0,0,0,0.12);
+      border-radius:12px;
+      margin:10px 0;
+      overflow:hidden;
+      background:#fff;
+    }
+    details.prov > summary{
+      cursor:pointer;
+      list-style:none;
+      padding:10px 12px;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:10px;
+      font-weight:800;
+      user-select:none;
+    }
+    details.prov > summary::-webkit-details-marker{ display:none; }
+    .prov-meta{
+      font-weight:600;
+      opacity:0.75;
+      font-size:0.9rem;
+      white-space:nowrap;
+    }
+    .prov-list{ padding: 0 8px 10px; }
+    .prov-list a{
+      display:block;
+      padding:8px 10px;
+      border-radius:10px;
+      text-decoration:none;
+      color:inherit;
+      border:1px solid transparent;
+    }
+    .prov-list a:hover{
+      border-color: rgba(0,0,0,0.10);
+      background: rgba(0,0,0,0.03);
+    }
+    .tour-sub{
+      display:block;
+      font-size:0.9rem;
+      opacity:0.75;
+      margin-top:2px;
+    }
   </style>
 </head>
 
@@ -119,61 +113,39 @@
   <header>
     <div class="bar">
       <div>
-        <div class="title">Ski Touring Guide – Map</div>
-        <div class="hint">Click a line → open tour</div>
+        <div class="title">Ski Touring Guide – 3D Terrain</div>
+        <div class="hint">Drag to rotate • scroll to zoom • click a line → open tour</div>
       </div>
       <div class="controls">
         <button id="fit" type="button">Fit to tours</button>
         <button id="jumpToc" type="button">Table of contents ↓</button>
+        <label style="display:flex;gap:8px;align-items:center;">
+          <span style="opacity:.8;font-weight:700;">Terrain</span>
+          <input id="exag" type="range" min="0" max="2.5" step="0.1" value="1.2" />
+        </label>
       </div>
     </div>
   </header>
 
   <div id="map"></div>
-  <div class="loading" id="loading">Loading tours…</div>
+  <div class="loading" id="loading">Loading map…</div>
 
-  <!-- Lightweight “Table of contents” AFTER the map -->
   <section class="toc" id="toc">
     <h2>Table of contents <small>(by province)</small></h2>
     <div id="tocRoot"></div>
   </section>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Load token from separate file -->
+  <script src="./js/mapbox_token.js"></script>
+
   <script>
     const GEOJSON_URL = "./data/tours.geojson";
 
-    function trackColorFromDirection(direction) {
-      const d = String(direction || "").toLowerCase().trim();
-      if (d === "up" || d === "ascent") return "#1f6feb";
-      if (d === "down" || d === "descent") return "#b64a4a";
-      if (d === "traverse" || d === "cross") return "#b000b5";
-      return "#1f6feb";
-    }
-
-    // ---- Map (OSM only, canvas for speed) ----
-    const openStreet = L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
-    );
-
-    const map = L.map("map", {
-      zoomControl: true,
-      preferCanvas: true,
-      renderer: L.canvas(),
-      layers: [openStreet]
-    });
-    map.setView([50.0, -123.0], 7);
-
-    let toursLayer = null;
-    let toursData = null;
-
-    const loadingEl = document.getElementById("loading");
-    const tocRoot = document.getElementById("tocRoot");
-
     function setLoading(text, show=true){
-      if (!loadingEl) return;
-      loadingEl.textContent = text;
-      loadingEl.style.display = show ? "block" : "none";
+      const el = document.getElementById("loading");
+      if (!el) return;
+      el.textContent = text;
+      el.style.display = show ? "block" : "none";
     }
 
     function escapeHtml(s){
@@ -182,15 +154,69 @@
         .replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
 
-    // ---- Build a SUPER lightweight ToC: Province -> Title ----
+    // ---- Mapbox token ----
+    const token = window.MAPBOX_TOKEN;
+    if (!token || String(token).includes("PASTE_YOUR_TOKEN")) {
+      alert("Missing Mapbox token. Create docs/js/mapbox_token.js and set window.MAPBOX_TOKEN.");
+      throw new Error("Missing Mapbox token");
+    }
+    mapboxgl.accessToken = token;
+
+    // ---- Map init (outdoors style + 3D terrain) ----
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/outdoors-v12",
+      center: [-123.0, 50.0],
+      zoom: 6.8,
+      pitch: 60,
+      bearing: -20,
+      antialias: true
+    });
+
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
+
+    let toursData = null;
+    let toursBounds = null;
+
+    function computeBoundsFromGeoJSON(gj){
+      let minX= 180, minY=  90, maxX=-180, maxY=-90;
+      const feats = gj?.features || [];
+      for (const f of feats){
+        const g = f?.geometry;
+        if (!g) continue;
+        const t = g.type;
+        const coords = g.coordinates;
+        if (!coords) continue;
+
+        const scan = (arr) => {
+          if (!Array.isArray(arr) || !arr.length) return;
+          if (typeof arr[0] === "number" && typeof arr[1] === "number") {
+            const x = Number(arr[0]), y = Number(arr[1]);
+            if (isFinite(x) && isFinite(y)) {
+              if (x < minX) minX = x; if (x > maxX) maxX = x;
+              if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+            return;
+          }
+          for (const a of arr) scan(a);
+        };
+
+        if (t === "LineString" || t === "MultiLineString") scan(coords);
+      }
+
+      if (minX > maxX || minY > maxY) return null;
+      return [[minX, minY], [maxX, maxY]];
+    }
+
     function renderTOC(gj){
+      const tocRoot = document.getElementById("tocRoot");
       if (!tocRoot) return;
+
       const feats = (gj?.features || []).filter(f => {
         const t = f?.geometry?.type;
         return t === "LineString" || t === "MultiLineString";
       });
 
-      // group by province
       const byProv = new Map();
       for (const f of feats){
         const p = f?.properties || {};
@@ -199,18 +225,14 @@
         byProv.get(prov).push(p);
       }
 
-      // sort provinces
       const provKeys = Array.from(byProv.keys()).sort((a,b) => a.localeCompare(b));
-
-      // build HTML (string concat is fastest)
       let html = "";
+
       for (const prov of provKeys){
         const arr = byProv.get(prov) || [];
-
-        // sort titles within province
         arr.sort((a,b) => String(a.title||a.slug||"").localeCompare(String(b.title||b.slug||"")));
-
         const count = arr.length;
+
         html += `
           <details class="prov">
             <summary>
@@ -244,80 +266,131 @@
           }
         }
 
-        html += `
-            </div>
-          </details>
-        `;
+        html += `</div></details>`;
       }
 
       tocRoot.innerHTML = html;
     }
 
-    // ---- Load + draw tours ----
-    function loadTours(){
+    async function loadTours(){
       setLoading("Loading tours…");
-      fetch(GEOJSON_URL, { cache: "force-cache" })
-        .then(r => {
-          if (!r.ok) throw new Error(`Failed to load ${GEOJSON_URL} (${r.status})`);
-          return r.json();
-        })
-        .then(gj => {
-          toursData = gj;
+      const gj = await fetch(GEOJSON_URL, { cache: "force-cache" }).then(r => {
+        if (!r.ok) throw new Error(`Failed to load ${GEOJSON_URL} (${r.status})`);
+        return r.json();
+      });
+      toursData = gj;
+      toursBounds = computeBoundsFromGeoJSON(gj);
 
-          toursLayer = L.geoJSON(gj, {
-            filter: (feature) => {
-              const t = feature?.geometry?.type;
-              return t === "LineString" || t === "MultiLineString";
-            },
-            style: (feature) => {
-              const p = feature?.properties || {};
-              const dir = p.direction || p.direcrtion || "";
-              return { color: trackColorFromDirection(dir), weight: 3, opacity: 0.95 };
-            },
-            onEachFeature: (feature, layer) => {
-              const p = feature?.properties || {};
-              const page = p.page || p.url || "";
-              if (page) layer.on("click", () => window.open(page, "_blank"));
+      map.addSource("tours", { type: "geojson", data: gj });
 
-              const title = p.title || p.slug || "Tour";
-              const dir = p.direction || p.direcrtion || "";
-              layer.bindTooltip(`${title}${dir ? " • " + dir : ""}`, { sticky: true });
-            }
-          }).addTo(map);
+      // Line layer (color by direction)
+      map.addLayer({
+        id: "tours-line",
+        type: "line",
+        source: "tours",
+        layout: {
+          "line-join": "round",
+          "line-cap": "round"
+        },
+        paint: {
+          "line-width": 3,
+          "line-opacity": 0.95,
+          "line-color": [
+            "match",
+            ["downcase", ["coalesce", ["get","direction"], ""]],
+            "up", "#1f6feb",
+            "down", "#b64a4a",
+            "traverse", "#b000b5",
+            "loop", "#1f6feb",
+            "#1f6feb"
+          ]
+        }
+      });
 
-          try {
-            const b = toursLayer.getBounds();
-            if (b.isValid()) map.fitBounds(b.pad(0.15));
-          } catch (_) {}
+      // Slightly thicker line on hover
+      map.addLayer({
+        id: "tours-hover",
+        type: "line",
+        source: "tours",
+        filter: ["==", ["id"], ""],
+        layout: { "line-join":"round", "line-cap":"round" },
+        paint: { "line-width": 6, "line-opacity": 0.25 }
+      });
 
-          // Render ToC AFTER map is ready (keeps initial load snappy)
-          if ("requestIdleCallback" in window) {
-            requestIdleCallback(() => renderTOC(gj), { timeout: 1500 });
-          } else {
-            setTimeout(() => renderTOC(gj), 50);
-          }
+      // Interactions
+      map.on("mouseenter", "tours-line", () => map.getCanvas().style.cursor = "pointer");
+      map.on("mouseleave", "tours-line", () => {
+        map.getCanvas().style.cursor = "";
+        map.setFilter("tours-hover", ["==", ["id"], ""]);
+      });
 
-          setLoading("Loaded.", false);
-        })
-        .catch(err => {
-          console.error(err);
-          setLoading("Load error. Check console.", true);
-          alert("Could not load tours.geojson. Check console for details.");
-        });
+      map.on("mousemove", "tours-line", (e) => {
+        const f = e.features?.[0];
+        if (!f) return;
+
+        // Use slug as a stable hover key if present, else fallback
+        const slug = f.properties?.slug || f.properties?.title || "";
+        map.setFilter("tours-hover", ["==", ["get","slug"], slug]);
+      });
+
+      map.on("click", "tours-line", (e) => {
+        const p = e.features?.[0]?.properties || {};
+        const page = p.page || p.url || "";
+        if (page) window.open(page, "_blank");
+      });
+
+      // Fit to tours
+      if (toursBounds) {
+        map.fitBounds(toursBounds, { padding: 60, duration: 0 });
+      }
+
+      // Render ToC lazily
+      if ("requestIdleCallback" in window) {
+        requestIdleCallback(() => renderTOC(gj), { timeout: 1500 });
+      } else {
+        setTimeout(() => renderTOC(gj), 50);
+      }
+
+      setLoading("Loaded.", false);
     }
 
-    loadTours();
+    map.on("load", async () => {
+      // 3D terrain
+      map.addSource("mapbox-dem", {
+        type: "raster-dem",
+        url: "mapbox://mapbox.terrain-rgb",
+        tileSize: 512,
+        maxzoom: 14
+      });
 
-    // ---- Fit button ----
-    document.getElementById("fit")?.addEventListener("click", () => {
-      if (!toursLayer) return;
-      const b = toursLayer.getBounds();
-      if (b.isValid()) map.fitBounds(b.pad(0.15));
+      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.2 });
+
+      // Optional: sky for nicer 3D look
+      map.addLayer({
+        id: "sky",
+        type: "sky",
+        paint: {
+          "sky-type": "atmosphere",
+          "sky-atmosphere-sun-intensity": 10
+        }
+      });
+
+      await loadTours();
     });
 
-    // ---- Jump to ToC ----
+    // Controls
+    document.getElementById("fit")?.addEventListener("click", () => {
+      if (!toursBounds) return;
+      map.fitBounds(toursBounds, { padding: 60, duration: 800 });
+    });
+
     document.getElementById("jumpToc")?.addEventListener("click", () => {
       document.getElementById("toc")?.scrollIntoView({ behavior: "smooth" });
+    });
+
+    document.getElementById("exag")?.addEventListener("input", (e) => {
+      const v = Number(e.target.value);
+      try { map.setTerrain({ source: "mapbox-dem", exaggeration: v }); } catch (_) {}
     });
   </script>
 </body>
