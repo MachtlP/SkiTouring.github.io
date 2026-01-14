@@ -5,39 +5,33 @@ Write content only — metadata comes from tours.geojson.
 -->
 
 # Overview
-TODO
+This file is auto-generated and no information for this given.
 
 ## Quick facts
-- **Start / trailhead:** TODO
-- **Best season:** TODO
-- **Aspect / elevation band:** TODO
-- **Typical time:** TODO
-- **Typical distance / vert:** TODO
-- **Group size / parking:** TODO
+- **Parking:** This file is auto-generated and no information for this given.
+- **Start / trailhead:** This file is auto-generated and no information for this given.
+- **Best season:** This file is auto-generated and no information for this given.
+
 
 # Access
-TODO
+This file is auto-generated and no information for this given.
 
 # Route
 ## Ascent
-TODO
-
+This file is auto-generated and no information for this given.
 ## Descent
-TODO 
+This file is auto-generated and no information for this given.
 
 # Avalanche terrain & hazards
-- **Avalanche problems to watch:** TODO 
-- **Terrain traps:** TODO
-- **Common “gotchas”:** TODO
-- **Notes on safe options / bail-outs:** TODO
+- **Avalanche problems to watch:** No information available — this file is generated automatically.
+- **Terrain traps:** This file is auto-generated and no information for this given.
+
 
 # Conditions & timing
-- When the route is best (time of day, stability patterns, melt-freeze, etc.)
-- What makes it a “no-go”
-- Any micro-weather notes (wind loading zones, sun hits early, etc.)
+- This file is auto-generated and no information for this given.
 
 # Variants
-- Not outlined yet
+- NThis file is auto-generated and no information for this given.
 
 # Photos
 > Add photos by dropping images into `docs/photos/Ginpeak_CAN_BC_Whistler_up/`.
@@ -48,8 +42,8 @@ Optional captions:
 - `02.jpg` — TODO caption
 
 # References / links
-- [Link title](https://example.com)
 - [Avalanche Canada](https://avalanche.ca/)
+- [Snowpackmodel Avalanche Canada](https://snowpack.avalanche.ca/ca?center=-115%2C55&zoom=4.25&property=haz&mapDataMode=zoom-based)
 
 
 

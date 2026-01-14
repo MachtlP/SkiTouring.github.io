@@ -4,6 +4,7 @@ import json
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
+from datetime import datetime, timezone
 
 
 # -------------------------
@@ -258,6 +259,10 @@ def build_detail_feature(slug: str,
         "start_lon": coords[0][0],
         "start_lat": coords[0][1],
     }
+    # build / upload timestamp (UTC)
+    now_utc = datetime.now(timezone.utc)
+    props["generated_at"] = now_utc.isoformat().replace("+00:00", "Z")
+    props["generated_date"] = now_utc.date().isoformat()
 
     # stats
     dist_km = round(track_distance_km(coords), 2)
