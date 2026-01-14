@@ -10,7 +10,11 @@
   <link rel="stylesheet" href="../css/map.css" />
   <link rel="stylesheet" href="../css/tour.css" />
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Mapbox GL JS -->
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css"
+    rel="stylesheet"
+  />
 
   <style>
     #map { height: 420px; width: 100%; border-radius: 12px; }
@@ -18,7 +22,7 @@
     .elev-wrap{
       margin-top: 10px;
       border-radius: 12px;
-      border: 2px solid rgba(0,0,0,0.25); /* stronger border */
+      border: 2px solid rgba(0,0,0,0.25);
       padding: 10px;
       position: relative;
       background: #fff;
@@ -33,14 +37,13 @@
     .elev-title{ font-weight: 700; }
     .elev-stats{ opacity: 0.95; font-size: 0.95rem; }
 
-    /* HIGH CONTRAST CANVAS */
     #elevCanvas{
       width:100%;
       height:190px;
       display:block;
       border-radius:10px;
-      background:#fff;                 /* solid white */
-      border:2px solid rgba(0,0,0,0.25); /* visible frame */
+      background:#fff;
+      border:2px solid rgba(0,0,0,0.25);
     }
 
     .elev-note{
@@ -90,7 +93,6 @@
       <h1 class="tour-title">{{TITLE}}</h1>
       <p class="tour-sub">{{PROVINCE}} • {{REGION}}</p>
       <p class="tour-meta" id="buildMeta" style="opacity:.75;font-size:.92rem;margin-top:4px;"></p>
-
     </header>
 
     <section class="tour-map">
@@ -116,38 +118,37 @@
 
   </main>
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
 
   <script>
+    // ==========================
+    // Config
+    // ==========================
+    // Put your token here (or inject it in your page builder):
+    // - In Mapbox Studio: Account → Access tokens
+    mapboxgl.accessToken = "{{MAPBOX_TOKEN}}";
+
     const slug = "{{SLUG}}";
     const detailUrl = `../data/tours_detail/${slug}.geojson`;
 
-    const map = L.map("map", { zoomControl: true });
-
-    const openTopo = L.tileLayer(
-      "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-      { maxZoom: 17, attribution: "&copy; OpenStreetMap contributors, SRTM | OpenTopoMap" }
-    );
-    const openStreet = L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
-    );
-
-    openTopo.addTo(map);
-    L.control.layers({ "Topo": openTopo, "Street": openStreet }, null, { collapsed: true }).addTo(map);
-    map.setView([50.0, -123.0], 7);
-
+    // ==========================
+    // Helpers (same logic as before)
+    // ==========================
     function htmlEscape(s) {
       return String(s)
         .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
     }
+
     function showError(msg, obj) {
       console.error(msg, obj || "");
       const el = document.getElementById("mapError");
       if (!el) return;
       el.style.display = "block";
-      const extra = obj ? `<br><code>${htmlEscape(JSON.stringify(obj).slice(0, 600))}${JSON.stringify(obj).length > 600 ? "…" : ""}</code>` : "";
+      const extra = obj
+        ? `<br><code>${htmlEscape(JSON.stringify(obj).slice(0, 600))}${JSON.stringify(obj).length > 600 ? "…" : ""}</code>`
+        : "";
       el.innerHTML = `<strong>Map load error:</strong> ${htmlEscape(msg)}${extra}`;
     }
 
@@ -177,14 +178,17 @@
       return 2 * R * Math.asin(Math.sqrt(a));
     }
 
-    function setupElevationProfile(points, latlngs) {
+    // ==========================
+    // Elevation profile (unchanged, except marker is Mapbox)
+    // ==========================
+    function setupElevationProfile(pointsLonLatEle, latlngs, lonlats, map) {
       const note = document.getElementById("elevNote");
       const statsEl = document.getElementById("elevStats");
       const canvas = document.getElementById("elevCanvas");
       const tooltip = document.getElementById("elevTooltip");
       const elevWrap = document.getElementById("elevWrap");
 
-      const elev = points.map(p => (p.length >= 3 && isFinite(p[2]) ? Number(p[2]) : null));
+      const elev = pointsLonLatEle.map(p => (p.length >= 3 && isFinite(p[2]) ? Number(p[2]) : null));
       const hasElev = elev.some(v => v !== null);
 
       if (!hasElev) {
@@ -222,120 +226,140 @@
       }
 
       function draw(cursorIdx = null) {
-  const { dpr, W, H } = resizeCanvas();
-  const ctx = canvas.getContext("2d");
+        const { dpr, W, H } = resizeCanvas();
+        const ctx = canvas.getContext("2d");
 
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-  const padL = 52, padR = 12, padT = 12, padB = 28;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
+        const padL = 52, padR = 12, padT = 12, padB = 28;
+        const plotW = W - padL - padR;
+        const plotH = H - padT - padB;
 
-  // SOLID WHITE BG
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = "#fff";
-  ctx.fillRect(0, 0, W, H);
+        // Solid white bg
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, W, H);
 
-  // total distance once (reuse everywhere)
-  const totalKm = distKm[distKm.length - 1] || 0;
+        const totalKm = distKm[distKm.length - 1] || 0;
 
-  // GRID (VISIBLE) – horizontal + vertical every 1 km
-  ctx.strokeStyle = "rgba(0,0,0,0.25)";
-  ctx.lineWidth = 1;
+        // Grid
+        ctx.strokeStyle = "rgba(0,0,0,0.25)";
+        ctx.lineWidth = 1;
 
-  // horizontal grid (every 1/5 of height)
-  for (let i = 0; i <= 5; i++) {
-    const y = padT + (i / 5) * plotH;
-    ctx.beginPath();
-    ctx.moveTo(padL, y);
-    ctx.lineTo(padL + plotW, y);
-    ctx.stroke();
-  }
+        // horizontal grid
+        for (let i = 0; i <= 5; i++) {
+          const y = padT + (i / 5) * plotH;
+          ctx.beginPath();
+          ctx.moveTo(padL, y);
+          ctx.lineTo(padL + plotW, y);
+          ctx.stroke();
+        }
 
-  // vertical grid (every 1 km)
-  if (totalKm > 0) {
-    const maxTick = Math.floor(totalKm);
-    for (let k = 0; k <= maxTick; k++) {
-      const x = padL + (k / totalKm) * plotW;
-      ctx.beginPath();
-      ctx.moveTo(x, padT);
-      ctx.lineTo(x, padT + plotH);
-      ctx.stroke();
-    }
-  }
+        // vertical grid every 1 km
+        if (totalKm > 0) {
+          const maxTick = Math.floor(totalKm);
+          for (let k = 0; k <= maxTick; k++) {
+            const x = padL + (k / totalKm) * plotW;
+            ctx.beginPath();
+            ctx.moveTo(x, padT);
+            ctx.lineTo(x, padT + plotH);
+            ctx.stroke();
+          }
+        }
 
-  // LABELS (DARK)
-  ctx.fillStyle = "#111";
-  ctx.font = "12px system-ui, sans-serif";
-  ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
-  ctx.fillText(`${Math.round(minE)} m`, 8, padT + plotH);
-  ctx.fillText("0 km", padL, H - 8);
-  ctx.fillText(`${(totalKm || 0).toFixed(1)} km`, padL + plotW - 48, H - 8);
+        // Labels
+        ctx.fillStyle = "#111";
+        ctx.font = "12px system-ui, sans-serif";
+        ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
+        ctx.fillText(`${Math.round(minE)} m`, 8, padT + plotH);
+        ctx.fillText("0 km", padL, H - 8);
+        ctx.fillText(`${(totalKm || 0).toFixed(1)} km`, padL + plotW - 48, H - 8);
 
-  // map distance->x, elevation->y
-  const denomKm = totalKm || 1; // avoid div by 0
-  const xFor = i => padL + (distKm[i] / denomKm) * plotW;
-  const yForE = e => {
-    const t = (e - minE) / ((maxE - minE) || 1);
-    return padT + (1 - t) * plotH;
-  };
+        const denomKm = totalKm || 1;
+        const xFor = i => padL + (distKm[i] / denomKm) * plotW;
+        const yForE = e => {
+          const t = (e - minE) / ((maxE - minE) || 1);
+          return padT + (1 - t) * plotH;
+        };
 
-  // PROFILE PATH
-  let firstIdx = -1;
-  ctx.beginPath();
-  for (let i = 0; i < elev.length; i++) {
-    if (elev[i] === null) continue;
-    if (firstIdx === -1) firstIdx = i;
-    const x = xFor(i);
-    const y = yForE(elev[i]);
-    if (i === firstIdx) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
+        // Profile path
+        let firstIdx = -1;
+        ctx.beginPath();
+        for (let i = 0; i < elev.length; i++) {
+          if (elev[i] === null) continue;
+          if (firstIdx === -1) firstIdx = i;
+          const x = xFor(i);
+          const y = yForE(elev[i]);
+          if (i === firstIdx) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
 
-  // STRONG FILL
-  ctx.lineJoin = "round";
-  ctx.lineCap  = "round";
+        ctx.lineJoin = "round";
+        ctx.lineCap  = "round";
 
-  ctx.strokeStyle = "#000";
-  ctx.lineWidth = 5;
-  ctx.stroke();
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 5;
+        ctx.stroke();
 
-  ctx.globalAlpha = 0.25;
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.lineTo(padL + plotW, padT + plotH);
-  ctx.lineTo(padL, padT + plotH);
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = 1;
+        ctx.globalAlpha = 0.25;
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.lineTo(padL + plotW, padT + plotH);
+        ctx.lineTo(padL, padT + plotH);
+        ctx.closePath();
+        ctx.fill();
+        ctx.globalAlpha = 1;
 
-  // CURSOR
-  if (cursorIdx !== null) {
-    const e = elev[cursorIdx];
-    if (e !== null) {
-      const x = xFor(cursorIdx);
-      const y = yForE(e);
+        // Cursor
+        if (cursorIdx !== null) {
+          const e = elev[cursorIdx];
+          if (e !== null) {
+            const x = xFor(cursorIdx);
+            const y = yForE(e);
 
-      ctx.strokeStyle = "#000";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(x, padT);
-      ctx.lineTo(x, padT + plotH);
-      ctx.stroke();
+            ctx.strokeStyle = "#000";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(x, padT);
+            ctx.lineTo(x, padT + plotH);
+            ctx.stroke();
 
-      ctx.fillStyle = "#000";
-      ctx.beginPath();
-      ctx.arc(x, y, 6, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-}
+            ctx.fillStyle = "#000";
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
 
+      // Mapbox hover point source/layer (created once)
+      const hoverSourceId = "hover-point";
 
-      // marker synced to profile (also high visibility)
-      const hoverMarker = L.circleMarker(latlngs[0], {
-        radius: 7, opacity: 1, fillOpacity: 1,
-        color: "#000", fillColor: "#000", weight: 2
-      }).addTo(map);
+      function ensureHoverPoint() {
+        if (map.getSource(hoverSourceId)) return;
+
+        map.addSource(hoverSourceId, {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [{
+              type: "Feature",
+              geometry: { type: "Point", coordinates: lonlats[0] }
+            }]
+          }
+        });
+
+        map.addLayer({
+          id: "hover-point-layer",
+          type: "circle",
+          source: hoverSourceId,
+          paint: {
+            "circle-radius": 7,
+            "circle-color": "#000",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#fff"
+          }
+        });
+      }
 
       function nearestIndexFromX(clientX) {
         const rect = canvas.getBoundingClientRect();
@@ -364,58 +388,12 @@
         tooltip.style.top  = `${clientY - wrapRect.top}px`;
       }
 
-      canvas.addEventListener("mousemove", (ev) => {
-        const idx = nearestIndexFromX(ev.clientX);
-        draw(idx);
-        hoverMarker.setLatLng(latlngs[idx]);
-        updateTooltip(idx, ev.clientX, ev.clientY);
-      });
-
-      canvas.addEventListener("mouseleave", () => {
-        tooltip.style.display = "none";
-        draw(null);
-      });
-
-      draw(null);
-      window.addEventListener("resize", () => draw(null));
-    }
-
-    fetch(detailUrl)
-      .then(r => {
-        if (!r.ok) throw new Error(`Failed to load GeoJSON (${r.status})`);
-        return r.json();
-      })
-      .then(gj => {
-        const geom = extractGeometry(gj);
-        if (!geom || !geom.coordinates) {
-          showError("Could not find geometry.coordinates in GeoJSON", { type: gj?.type, keys: Object.keys(gj || {}) });
-          return;
-        }
-
-        const points = flattenToPoints(geom.coordinates).filter(p => Array.isArray(p) && p.length >= 2);
-        if (points.length < 2) {
-          showError(`Not enough coordinate points to draw (got ${points.length})`, { geomType: geom.type });
-          return;
-        }
-
-        const latlngs = points.map(p => [Number(p[1]), Number(p[0])]);
-        if (!isFinite(latlngs[0][0]) || !isFinite(latlngs[0][1])) {
-          showError("Coordinates are not numeric (NaN). Check GeoJSON coordinate format.", { sample: points[0] });
-          return;
-        }
-
-        const line = L.polyline(latlngs, { weight: 4, opacity: 0.95 }).addTo(map);
-        map.fitBounds(line.getBounds().pad(0.18));
-
-        L.circleMarker(latlngs[0], { radius: 6, opacity: 1, fillOpacity: 0.9 })
-          .addTo(map).bindTooltip("Start");
-
-        L.circleMarker(latlngs[latlngs.length - 1], { radius: 6, opacity: 1, fillOpacity: 0.9 })
-          .addTo(map).bindTooltip("End");
-
-        setupElevationProfile(points, latlngs);
-      })
-      .catch(err => showError(err.message || String(err)));
-  </script>
-</body>
-</html>
+      function setHoverOnMap(idx) {
+        ensureHoverPoint();
+        const src = map.getSource(hoverSourceId);
+        if (!src) return;
+        src.setData({
+          type: "FeatureCollection",
+          features: [{
+            type: "Feature",
+            geometry: { type: "Point", coordina
