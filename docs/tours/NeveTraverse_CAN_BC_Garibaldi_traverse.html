@@ -14,27 +14,26 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css" rel="stylesheet" />
 
   <style>
-    /* Map full width under nav */
+    /* keep map full width; height is primarily controlled by tour.css (#map) */
     #map{
-      width: 100%;
-      height: 420px;
+      width:100%;
+      height:420px;
       border-radius: 12px;
-      overflow: hidden;
+      overflow:hidden;
     }
 
-    /* Nav: left / center / right */
+    /* nav layout: left / center / right */
     .tour-nav{
-      display: grid;
+      display:grid;
       grid-template-columns: 1fr auto 1fr;
-      align-items: center;
+      align-items:center;
       gap: 12px;
-      margin-bottom: 10px;
     }
-    .tour-nav .nav-left  { justify-self: start; }
-    .tour-nav .nav-center{ justify-self: center; text-align: center; }
-    .tour-nav .nav-right { justify-self: end; }
+    .tour-nav .nav-left{ justify-self:start; }
+    .tour-nav .nav-center{ justify-self:center; text-align:center; }
+    .tour-nav .nav-right{ justify-self:end; }
 
-    /* Center title + subline */
+    /* center title + subline */
     .nav-title{
       font-weight: 800;
       font-size: clamp(18px, 2.2vw, 28px);
@@ -44,28 +43,19 @@
       margin-top: 2px;
       font-size: 13px;
       opacity: 0.85;
-      line-height: 1.2;
-      white-space: nowrap;
     }
 
-    /* Buttons: border hugs text */
+    /* buttons: border hugs text */
     .tour-nav a{
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
       width: fit-content;
       padding: 6px 10px;
       line-height: 1.2;
       border-radius: 10px;
-      text-decoration: none;
+      text-decoration:none;
     }
-    .tour-nav a.btn{
-      width: fit-content;
-      padding: 6px 10px;
-    }
-
-    /* Optional spacing */
-    .tour-map{ margin-bottom: 14px; }
 
     /* Error box */
     .map-error{
@@ -78,6 +68,41 @@
       display:none;
     }
     .map-error code { font-size: 0.9em; }
+
+    /* Plotly elevation block */
+    .elev-wrap{
+      margin-top: 12px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      overflow: hidden;
+    }
+    .elev-head{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .elev-title{ font-weight: 800; }
+    .elev-stats{ opacity: .9; font-size: .95rem; }
+    #elevPlot{
+      width: 100%;
+      height: 240px;
+    }
+    #elevNote{
+      display:none;
+      opacity:.85;
+      font-size:.95rem;
+      margin-top: 8px;
+    }
+
+    @media (max-width: 900px){
+      #map{ height: 320px; }
+      #elevPlot{ height: 220px; }
+    }
   </style>
 </head>
 
@@ -99,11 +124,23 @@
       </div>
     </nav>
 
+    <!-- MAP -->
     <section class="tour-map">
       <div id="map"></div>
       <div id="mapError" class="map-error"></div>
     </section>
 
+    <!-- Elevation profile (Plotly) -->
+    <section class="elev-wrap">
+      <div class="elev-head">
+        <div class="elev-title">Elevation profile</div>
+        <div class="elev-stats" id="elevStats">loading…</div>
+      </div>
+      <div id="elevPlot"></div>
+      <div id="elevNote">No elevation data found in this GeoJSON.</div>
+    </section>
+
+    <!-- CONTENT -->
     <section class="tour-content">
       <h1>Overview</h1>
 <p>This file is auto-generated and no information for this given.</p>
@@ -148,17 +185,33 @@
 
   </main>
 
-  <!-- Token path from docs/tours/*.html -->
+  <!-- Token: from docs/tours/*.html -> ../js/mapbox_token.js -->
   <script src="../js/mapbox_token.js"></script>
+
+  <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
+
+  <!-- Plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
 
   <script>
     // ==========================
-    // Mapbox 3D terrain tour map
+    // Config
     // ==========================
-    const token = window.MAPBOX_TOKEN; // mapbox_token.js must set this
+    const token = window.MAPBOX_TOKEN; // mapbox_token.js must set window.MAPBOX_TOKEN = "pk..."
     const slug = "NeveTraverse_CAN_BC_Garibaldi_traverse";
     const detailUrl = `../data/tours_detail/${slug}.geojson`;
+
+    // You can tweak these to match your guide.html
+    const MAP_STYLE = "mapbox://styles/mapbox/outdoors-v12";
+    const DEM_SOURCE = "mapbox://mapbox.terrain-rgb"; // Mapbox DEM tileset
+    const TERRAIN_EXAGGERATION = 1.3;
+
+    function htmlEscape(s) {
+      return String(s)
+        .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+    }
 
     function showError(msg, obj) {
       console.error(msg, obj || "");
@@ -166,11 +219,9 @@
       if (!el) return;
       el.style.display = "block";
       const extra = obj
-        ? `<br><code>${String(JSON.stringify(obj)).slice(0, 800)}${
-            JSON.stringify(obj).length > 800 ? "…" : ""
-          }</code>`
+        ? `<br><code>${htmlEscape(JSON.stringify(obj).slice(0, 900))}${JSON.stringify(obj).length > 900 ? "…" : ""}</code>`
         : "";
-      el.innerHTML = `<strong>Map error:</strong> ${msg}${extra}`;
+      el.innerHTML = `<strong>Map error:</strong> ${htmlEscape(msg)}${extra}`;
     }
 
     if (!token) {
@@ -178,124 +229,268 @@
     }
     mapboxgl.accessToken = token || "";
 
+    // ==========================
+    // GeoJSON helpers
+    // ==========================
+    function extractFirstLineCoords(gj) {
+      let geom = null;
+      if (gj?.type === "FeatureCollection" && gj.features?.length) geom = gj.features[0]?.geometry;
+      else if (gj?.type === "Feature") geom = gj.geometry;
+      else if (gj?.geometry) geom = gj.geometry;
+      else geom = gj;
+
+      const coords = geom?.coordinates;
+      if (!coords) return null;
+
+      // LineString: [ [lon,lat,ele?], ... ]
+      // MultiLineString: [ [ [lon,lat,ele?], ... ], ... ]
+      const pts = Array.isArray(coords[0]?.[0]) ? coords.flat() : coords;
+      return pts
+        .filter(p => Array.isArray(p) && p.length >= 2)
+        .map(p => [Number(p[0]), Number(p[1]), (p.length >= 3 ? Number(p[2]) : null)]);
+    }
+
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000, toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    // ==========================
+    // Map init (with 3D terrain)
+    // ==========================
     const map = new mapboxgl.Map({
       container: "map",
-      style: "mapbox://styles/mapbox/outdoors-v12",
+      style: MAP_STYLE,
       center: [-123.0, 50.0],
       zoom: 7,
-      pitch: 60,
-      bearing: -20,
+      pitch: 55,      // 3D feel immediately
+      bearing: -15,
       antialias: true
     });
 
     map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
 
-    map.on("load", async () => {
-      try {
-        // ---- 3D terrain ----
+    function enable3DTerrain() {
+      // DEM source
+      if (!map.getSource("mapbox-dem")) {
         map.addSource("mapbox-dem", {
           type: "raster-dem",
-          url: "mapbox://mapbox.terrain-rgb",
+          url: DEM_SOURCE,
           tileSize: 512,
           maxzoom: 14
         });
+      }
+      map.setTerrain({ source: "mapbox-dem", exaggeration: TERRAIN_EXAGGERATION });
 
-        map.setTerrain({ source: "mapbox-dem", exaggeration: 1.2 });
-
-        // Optional: sky layer (nice in 3D)
+      // Optional sky for nicer 3D look
+      if (!map.getLayer("sky")) {
         map.addLayer({
           id: "sky",
           type: "sky",
           paint: {
             "sky-type": "atmosphere",
-            "sky-atmosphere-sun-intensity": 10
+            "sky-atmosphere-sun": [0.0, 0.0],
+            "sky-atmosphere-sun-intensity": 12
           }
         });
+      }
+    }
 
-        // ---- Load tour geometry ----
-        const gj = await fetch(detailUrl, { cache: "force-cache" }).then(r => {
-          if (!r.ok) throw new Error(`Failed to load GeoJSON (${r.status})`);
-          return r.json();
-        });
+    // ==========================
+    // Elevation plot (Plotly)
+    // ==========================
+    function renderElevationPlot(pointsLonLatEle) {
+      const elevStatsEl = document.getElementById("elevStats");
+      const elevNoteEl = document.getElementById("elevNote");
 
-        // get first geometry
-        let geom = null;
-        if (gj?.type === "FeatureCollection" && gj.features?.length) geom = gj.features[0]?.geometry;
-        else if (gj?.type === "Feature") geom = gj.geometry;
-        else if (gj?.geometry) geom = gj.geometry;
-        else geom = gj;
+      const lonlats = pointsLonLatEle.map(p => [p[0], p[1]]);
+      const elev = pointsLonLatEle.map(p => (Number.isFinite(p[2]) ? p[2] : null));
+      const hasElev = elev.some(v => v !== null);
 
-        const coords = geom?.coordinates;
-        if (!coords) throw new Error("No geometry.coordinates found in GeoJSON");
+      if (!hasElev) {
+        elevNoteEl.style.display = "block";
+        elevStatsEl.textContent = "no elevation";
+        return;
+      }
 
-        // flatten coords (LineString or MultiLineString)
-        const pts = Array.isArray(coords[0]?.[0]) ? coords.flat() : coords;
-        const lineCoords = pts
-          .map(p => [Number(p[0]), Number(p[1])])
-          .filter(p => isFinite(p[0]) && isFinite(p[1]));
+      const distKm = new Array(pointsLonLatEle.length).fill(0);
+      for (let i = 1; i < pointsLonLatEle.length; i++) {
+        distKm[i] =
+          distKm[i-1] +
+          haversineMeters(
+            pointsLonLatEle[i-1][1], pointsLonLatEle[i-1][0],
+            pointsLonLatEle[i][1],   pointsLonLatEle[i][0]
+          ) / 1000;
+      }
 
-        if (lineCoords.length < 2) throw new Error(`Not enough coordinates to draw (${lineCoords.length})`);
+      const elevVals = elev.filter(v => v !== null);
+      const minE = Math.min(...elevVals);
+      const maxE = Math.max(...elevVals);
 
-        // ---- Draw line ----
-        map.addSource("tour", {
+      let gain = 0, loss = 0;
+      for (let i = 1; i < elev.length; i++) {
+        if (elev[i] === null || elev[i-1] === null) continue;
+        const de = elev[i] - elev[i-1];
+        if (de > 0) gain += de; else loss += -de;
+      }
+
+      elevStatsEl.textContent =
+        `${distKm[distKm.length-1].toFixed(1)} km • ↑ ${Math.round(gain)} m • ↓ ${Math.round(loss)} m • ${Math.round(minE)}–${Math.round(maxE)} m`;
+
+      const trace = {
+        x: distKm,
+        y: elev,
+        type: "scatter",
+        mode: "lines",
+        line: { width: 3 },
+        hovertemplate: "%{x:.2f} km<br>%{y:.0f} m<extra></extra>"
+      };
+
+      const layout = {
+        margin: { l: 50, r: 12, t: 6, b: 36 },
+        xaxis: { title: "Distance (km)", fixedrange: false },
+        yaxis: { title: "Elevation (m)", fixedrange: false },
+        dragmode: "pan",
+        hovermode: "x",
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)"
+      };
+
+      const config = {
+        displayModeBar: false,
+        responsive: true,
+        scrollZoom: true
+      };
+
+      Plotly.newPlot("elevPlot", [trace], layout, config);
+
+      // OPTIONAL: sync hover point on map
+      const hoverSourceId = "elev-hover";
+      function ensureHoverPoint() {
+        if (map.getSource(hoverSourceId)) return;
+        map.addSource(hoverSourceId, {
           type: "geojson",
-          data: { type: "Feature", geometry: { type: "LineString", coordinates: lineCoords } }
-        });
-
-        map.addLayer({
-          id: "tour-line",
-          type: "line",
-          source: "tour",
-          layout: { "line-join": "round", "line-cap": "round" },
-          paint: { "line-color": "#111", "line-width": 4, "line-opacity": 0.95 }
-        });
-
-        // start point
-        map.addSource("start", {
-          type: "geojson",
-          data: { type: "Feature", geometry: { type: "Point", coordinates: lineCoords[0] } }
+          data: { type: "FeatureCollection", features: [{ type:"Feature", geometry:{ type:"Point", coordinates: lonlats[0] } }] }
         });
         map.addLayer({
-          id: "start-pt",
+          id: "elev-hover-pt",
           type: "circle",
-          source: "start",
+          source: hoverSourceId,
           paint: {
-            "circle-radius": 6,
+            "circle-radius": 7,
             "circle-color": "#111",
             "circle-stroke-width": 2,
             "circle-stroke-color": "#fff"
           }
         });
-
-        // end point
-        map.addSource("end", {
-          type: "geojson",
-          data: { type: "Feature", geometry: { type: "Point", coordinates: lineCoords[lineCoords.length - 1] } }
-        });
-        map.addLayer({
-          id: "end-pt",
-          type: "circle",
-          source: "end",
-          paint: {
-            "circle-radius": 6,
-            "circle-color": "#111",
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#fff",
-            "circle-opacity": 0.8
-          }
-        });
-
-        // ---- Fit bounds ----
-        const bounds = lineCoords.reduce(
-          (b, c) => b.extend(c),
-          new mapboxgl.LngLatBounds(lineCoords[0], lineCoords[0])
-        );
-        map.fitBounds(bounds, { padding: 60, duration: 0 });
-
-      } catch (err) {
-        showError(err?.message || String(err));
       }
-    });
+      function setHoverPoint(lonlat) {
+        const src = map.getSource(hoverSourceId);
+        if (!src) return;
+        src.setData({ type: "FeatureCollection", features: [{ type:"Feature", geometry:{ type:"Point", coordinates: lonlat } }] });
+      }
+
+      const plotDiv = document.getElementById("elevPlot");
+
+      if (map.isStyleLoaded()) ensureHoverPoint();
+      else map.once("load", ensureHoverPoint);
+
+      plotDiv.on("plotly_hover", (ev) => {
+        const idx = ev?.points?.[0]?.pointIndex;
+        if (idx == null) return;
+        if (map.getSource(hoverSourceId)) setHoverPoint(lonlats[idx]);
+      });
+    }
+
+    // ==========================
+    // Load data, draw line, fit bounds
+    // ==========================
+    fetch(detailUrl)
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load GeoJSON (${r.status})`);
+        return r.json();
+      })
+      .then(gj => {
+        const pts = extractFirstLineCoords(gj);
+        if (!pts || pts.length < 2) throw new Error("Not enough coordinates to draw.");
+
+        const lineCoords = pts
+          .map(p => [p[0], p[1]])
+          .filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+
+        if (lineCoords.length < 2) throw new Error(`Not enough coordinate points (${lineCoords.length}).`);
+
+        map.on("load", () => {
+          // 3D terrain first (so line is drawn on top correctly)
+          enable3DTerrain();
+
+          map.addSource("tour", {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              geometry: { type: "LineString", coordinates: lineCoords }
+            }
+          });
+
+          map.addLayer({
+            id: "tour-line",
+            type: "line",
+            source: "tour",
+            paint: {
+              "line-color": "#111",
+              "line-width": 4,
+              "line-opacity": 0.95
+            }
+          });
+
+          // start + end points
+          map.addSource("start", {
+            type: "geojson",
+            data: { type: "Feature", geometry: { type: "Point", coordinates: lineCoords[0] } }
+          });
+          map.addLayer({
+            id: "start-pt",
+            type: "circle",
+            source: "start",
+            paint: {
+              "circle-radius": 6,
+              "circle-color": "#111",
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#fff"
+            }
+          });
+
+          map.addSource("end", {
+            type: "geojson",
+            data: { type: "Feature", geometry: { type: "Point", coordinates: lineCoords[lineCoords.length - 1] } }
+          });
+          map.addLayer({
+            id: "end-pt",
+            type: "circle",
+            source: "end",
+            paint: {
+              "circle-radius": 6,
+              "circle-color": "#111",
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#fff",
+              "circle-opacity": 0.85
+            }
+          });
+
+          // fit bounds
+          const bounds = lineCoords.reduce(
+            (b, c) => b.extend(c),
+            new mapboxgl.LngLatBounds(lineCoords[0], lineCoords[0])
+          );
+          map.fitBounds(bounds, { padding: 60, duration: 0 });
+
+          // elevation plot
+          renderElevationPlot(pts);
+        });
+      })
+      .catch(err => showError(err.message || String(err)));
   </script>
 </body>
 </html>
