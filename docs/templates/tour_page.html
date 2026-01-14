@@ -57,6 +57,25 @@
       text-decoration:none;
     }
 
+    /* Map controls row (toggle etc.) */
+    .map-controls{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+    }
+    .toggle{
+      display:inline-flex;
+      gap: 10px;
+      align-items:center;
+      user-select:none;
+      font-size: 14px;
+    }
+    .toggle input{ transform: translateY(1px); }
+
     /* Error box */
     .map-error{
       margin-top:10px;
@@ -102,6 +121,7 @@
     @media (max-width: 900px){
       #map{ height: 320px; }
       #elevPlot{ height: 220px; }
+      .map-controls{ padding: 8px 10px; }
     }
   </style>
 </head>
@@ -126,6 +146,16 @@
 
     <!-- MAP -->
     <section class="tour-map">
+      <div class="map-controls">
+        <label class="toggle" title="Toggle a line gradient overlay (distance-progress gradient)">
+          <input id="toggleGradient" type="checkbox" />
+          <span>Gradient overlay</span>
+        </label>
+
+        <!-- optional tiny hint -->
+        <span style="opacity:.8;font-size:13px;">Tip: drag/scroll, pitch for 3D</span>
+      </div>
+
       <div id="map"></div>
       <div id="mapError" class="map-error"></div>
     </section>
@@ -160,14 +190,14 @@
     // ==========================
     // Config
     // ==========================
-    const token = window.MAPBOX_TOKEN; // mapbox_token.js must set window.MAPBOX_TOKEN = "pk..."
+    const token = window.MAPBOX_TOKEN; // must set window.MAPBOX_TOKEN = "pk..."
     const slug = "{{SLUG}}";
     const detailUrl = `../data/tours_detail/${slug}.geojson`;
 
-    // You can tweak these to match your guide.html
+    // Match guide.html-ish setup
     const MAP_STYLE = "mapbox://styles/mapbox/outdoors-v12";
-    const DEM_SOURCE = "mapbox://mapbox.terrain-rgb"; // Mapbox DEM tileset
-    const TERRAIN_EXAGGERATION = 1.3;
+    const DEM_SOURCE = "mapbox://mapbox.terrain-rgb";
+    const TERRAIN_EXAGGERATION = 1.25;
 
     function htmlEscape(s) {
       return String(s)
@@ -220,14 +250,14 @@
     }
 
     // ==========================
-    // Map init (with 3D terrain)
+    // Map init (3D terrain)
     // ==========================
     const map = new mapboxgl.Map({
       container: "map",
       style: MAP_STYLE,
       center: [-123.0, 50.0],
       zoom: 7,
-      pitch: 55,      // 3D feel immediately
+      pitch: 55,
       bearing: -15,
       antialias: true
     });
@@ -235,7 +265,6 @@
     map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
 
     function enable3DTerrain() {
-      // DEM source
       if (!map.getSource("mapbox-dem")) {
         map.addSource("mapbox-dem", {
           type: "raster-dem",
@@ -246,7 +275,6 @@
       }
       map.setTerrain({ source: "mapbox-dem", exaggeration: TERRAIN_EXAGGERATION });
 
-      // Optional sky for nicer 3D look
       if (!map.getLayer("sky")) {
         map.addLayer({
           id: "sky",
@@ -254,11 +282,29 @@
           paint: {
             "sky-type": "atmosphere",
             "sky-atmosphere-sun": [0.0, 0.0],
-            "sky-atmosphere-sun-intensity": 12
+            "sky-atmosphere-sun-intensity": 10
           }
         });
       }
     }
+
+    // ==========================
+    // Gradient overlay toggle
+    // ==========================
+    function setGradientVisible(visible) {
+      const v = visible ? "visible" : "none";
+      if (map.getLayer("tour-line-gradient")) {
+        map.setLayoutProperty("tour-line-gradient", "visibility", v);
+      }
+      // (Optional) also dim the base line when gradient is on
+      if (map.getLayer("tour-line")) {
+        map.setPaintProperty("tour-line", "line-opacity", visible ? 0.10 : 0.95);
+      }
+    }
+
+    document.getElementById("toggleGradient")?.addEventListener("change", (e) => {
+      setGradientVisible(Boolean(e.target.checked));
+    });
 
     // ==========================
     // Elevation plot (Plotly)
@@ -267,7 +313,6 @@
       const elevStatsEl = document.getElementById("elevStats");
       const elevNoteEl = document.getElementById("elevNote");
 
-      const lonlats = pointsLonLatEle.map(p => [p[0], p[1]]);
       const elev = pointsLonLatEle.map(p => (Number.isFinite(p[2]) ? p[2] : null));
       const hasElev = elev.some(v => v !== null);
 
@@ -327,43 +372,6 @@
       };
 
       Plotly.newPlot("elevPlot", [trace], layout, config);
-
-      // OPTIONAL: sync hover point on map
-      const hoverSourceId = "elev-hover";
-      function ensureHoverPoint() {
-        if (map.getSource(hoverSourceId)) return;
-        map.addSource(hoverSourceId, {
-          type: "geojson",
-          data: { type: "FeatureCollection", features: [{ type:"Feature", geometry:{ type:"Point", coordinates: lonlats[0] } }] }
-        });
-        map.addLayer({
-          id: "elev-hover-pt",
-          type: "circle",
-          source: hoverSourceId,
-          paint: {
-            "circle-radius": 7,
-            "circle-color": "#111",
-            "circle-stroke-width": 2,
-            "circle-stroke-color": "#fff"
-          }
-        });
-      }
-      function setHoverPoint(lonlat) {
-        const src = map.getSource(hoverSourceId);
-        if (!src) return;
-        src.setData({ type: "FeatureCollection", features: [{ type:"Feature", geometry:{ type:"Point", coordinates: lonlat } }] });
-      }
-
-      const plotDiv = document.getElementById("elevPlot");
-
-      if (map.isStyleLoaded()) ensureHoverPoint();
-      else map.once("load", ensureHoverPoint);
-
-      plotDiv.on("plotly_hover", (ev) => {
-        const idx = ev?.points?.[0]?.pointIndex;
-        if (idx == null) return;
-        if (map.getSource(hoverSourceId)) setHoverPoint(lonlats[idx]);
-      });
     }
 
     // ==========================
@@ -385,25 +393,54 @@
         if (lineCoords.length < 2) throw new Error(`Not enough coordinate points (${lineCoords.length}).`);
 
         map.on("load", () => {
-          // 3D terrain first (so line is drawn on top correctly)
           enable3DTerrain();
 
+          // NOTE: lineMetrics:true enables line-gradient with line-progress
           map.addSource("tour", {
             type: "geojson",
+            lineMetrics: true,
             data: {
               type: "Feature",
               geometry: { type: "LineString", coordinates: lineCoords }
             }
           });
 
+          // Base line (solid)
           map.addLayer({
             id: "tour-line",
             type: "line",
             source: "tour",
+            layout: { "line-join":"round", "line-cap":"round" },
             paint: {
               "line-color": "#111",
               "line-width": 4,
               "line-opacity": 0.95
+            }
+          });
+
+          // Gradient overlay line (hidden by default; toggled by checkbox)
+          map.addLayer({
+            id: "tour-line-gradient",
+            type: "line",
+            source: "tour",
+            layout: {
+              "line-join":"round",
+              "line-cap":"round",
+              "visibility": "none"
+            },
+            paint: {
+              "line-width": 5,
+              "line-opacity": 0.95,
+              // Gradient by progress along the line (0 -> 1)
+              "line-gradient": [
+                "interpolate",
+                ["linear"],
+                ["line-progress"],
+                0.00, "#1f6feb",
+                0.33, "#22c55e",
+                0.66, "#f59e0b",
+                1.00, "#ef4444"
+              ]
             }
           });
 
