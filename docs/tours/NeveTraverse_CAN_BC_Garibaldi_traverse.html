@@ -11,10 +11,7 @@
   <link rel="stylesheet" href="../css/tour.css" />
 
   <!-- Mapbox GL JS -->
-  <link
-    href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css"
-    rel="stylesheet"
-  />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css" rel="stylesheet" />
 
   <style>
     #map { height: 420px; width: 100%; border-radius: 12px; }
@@ -156,22 +153,27 @@
 
   </main>
 
-  <!-- Mapbox GL JS -->
+  <!-- 1) Load token first (must define window.MAPBOX_TOKEN) -->
+  <script src="../data/js/mapbox_token.js"></script>
+
+  <!-- 2) Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
 
   <script>
     // ==========================
     // Config
     // ==========================
-    // Put your token here (or inject it in your page builder):
-    // - In Mapbox Studio: Account → Access tokens
-    mapboxgl.accessToken = "{{MAPBOX_TOKEN}}";
-
     const slug = "NeveTraverse_CAN_BC_Garibaldi_traverse";
     const detailUrl = `../data/tours_detail/${slug}.geojson`;
 
+    const token = window.MAPBOX_TOKEN; // from mapbox_token.js
+    if (!token) {
+      console.error("MAPBOX_TOKEN not found. Make sure ../data/js/mapbox_token.js sets window.MAPBOX_TOKEN");
+    }
+    mapboxgl.accessToken = token || "";
+
     // ==========================
-    // Helpers (same logic as before)
+    // Helpers
     // ==========================
     function htmlEscape(s) {
       return String(s)
@@ -217,7 +219,7 @@
     }
 
     // ==========================
-    // Elevation profile (unchanged, except marker is Mapbox)
+    // Elev profile + Mapbox hover marker
     // ==========================
     function setupElevationProfile(pointsLonLatEle, latlngs, lonlats, map) {
       const note = document.getElementById("elevNote");
@@ -273,18 +275,15 @@
         const plotW = W - padL - padR;
         const plotH = H - padT - padB;
 
-        // Solid white bg
         ctx.globalAlpha = 1;
         ctx.fillStyle = "#fff";
         ctx.fillRect(0, 0, W, H);
 
         const totalKm = distKm[distKm.length - 1] || 0;
 
-        // Grid
         ctx.strokeStyle = "rgba(0,0,0,0.25)";
         ctx.lineWidth = 1;
 
-        // horizontal grid
         for (let i = 0; i <= 5; i++) {
           const y = padT + (i / 5) * plotH;
           ctx.beginPath();
@@ -293,7 +292,6 @@
           ctx.stroke();
         }
 
-        // vertical grid every 1 km
         if (totalKm > 0) {
           const maxTick = Math.floor(totalKm);
           for (let k = 0; k <= maxTick; k++) {
@@ -305,7 +303,6 @@
           }
         }
 
-        // Labels
         ctx.fillStyle = "#111";
         ctx.font = "12px system-ui, sans-serif";
         ctx.fillText(`${Math.round(maxE)} m`, 8, padT + 10);
@@ -320,7 +317,6 @@
           return padT + (1 - t) * plotH;
         };
 
-        // Profile path
         let firstIdx = -1;
         ctx.beginPath();
         for (let i = 0; i < elev.length; i++) {
@@ -347,7 +343,6 @@
         ctx.fill();
         ctx.globalAlpha = 1;
 
-        // Cursor
         if (cursorIdx !== null) {
           const e = elev[cursorIdx];
           if (e !== null) {
@@ -369,8 +364,8 @@
         }
       }
 
-      // Mapbox hover point source/layer (created once)
       const hoverSourceId = "hover-point";
+      const hoverLayerId  = "hover-point-layer";
 
       function ensureHoverPoint() {
         if (map.getSource(hoverSourceId)) return;
@@ -387,7 +382,7 @@
         });
 
         map.addLayer({
-          id: "hover-point-layer",
+          id: hoverLayerId,
           type: "circle",
           source: hoverSourceId,
           paint: {
@@ -434,4 +429,139 @@
           type: "FeatureCollection",
           features: [{
             type: "Feature",
-            geometry: { type: "Point", coordina
+            geometry: { type: "Point", coordinates: lonlats[idx] }
+          }]
+        });
+      }
+
+      canvas.addEventListener("mousemove", (ev) => {
+        const idx = nearestIndexFromX(ev.clientX);
+        draw(idx);
+        setHoverOnMap(idx);
+        updateTooltip(idx, ev.clientX, ev.clientY);
+      });
+
+      canvas.addEventListener("mouseleave", () => {
+        tooltip.style.display = "none";
+        draw(null);
+      });
+
+      draw(null);
+      window.addEventListener("resize", () => draw(null));
+    }
+
+    // ==========================
+    // Create Mapbox map
+    // ==========================
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/outdoors-v12",
+      center: [-123.0, 50.0],
+      zoom: 7,
+      attributionControl: true
+    });
+
+    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
+
+    // ==========================
+    // Load GeoJSON and draw tour
+    // ==========================
+    fetch(detailUrl)
+      .then(r => {
+        if (!r.ok) throw new Error(`Failed to load GeoJSON (${r.status})`);
+        return r.json();
+      })
+      .then(gj => {
+        const geom = extractGeometry(gj);
+        if (!geom || !geom.coordinates) {
+          showError("Could not find geometry.coordinates in GeoJSON", { type: gj?.type, keys: Object.keys(gj || {}) });
+          return;
+        }
+
+        const points = flattenToPoints(geom.coordinates).filter(p => Array.isArray(p) && p.length >= 2);
+        if (points.length < 2) {
+          showError(`Not enough coordinate points to draw (got ${points.length})`, { geomType: geom.type });
+          return;
+        }
+
+        const lonlats = points.map(p => [Number(p[0]), Number(p[1])]);
+        const latlngs = points.map(p => [Number(p[1]), Number(p[0])]);
+
+        if (!isFinite(lonlats[0][0]) || !isFinite(lonlats[0][1])) {
+          showError("Coordinates are not numeric (NaN). Check GeoJSON coordinate format.", { sample: points[0] });
+          return;
+        }
+
+        // Wait for map style to be ready before adding sources/layers
+        map.on("load", () => {
+          // Line source
+          map.addSource("tour-line", {
+            type: "geojson",
+            data: {
+              type: "Feature",
+              geometry: { type: "LineString", coordinates: lonlats }
+            }
+          });
+
+          map.addLayer({
+            id: "tour-line-layer",
+            type: "line",
+            source: "tour-line",
+            paint: {
+              "line-color": "#111",
+              "line-width": 4,
+              "line-opacity": 0.95
+            }
+          });
+
+          // Start point
+          map.addSource("tour-start", {
+            type: "geojson",
+            data: { type: "Feature", geometry: { type: "Point", coordinates: lonlats[0] } }
+          });
+          map.addLayer({
+            id: "tour-start-layer",
+            type: "circle",
+            source: "tour-start",
+            paint: {
+              "circle-radius": 6,
+              "circle-color": "#111",
+              "circle-opacity": 0.95,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#fff"
+            }
+          });
+
+          // End point
+          map.addSource("tour-end", {
+            type: "geojson",
+            data: { type: "Feature", geometry: { type: "Point", coordinates: lonlats[lonlats.length - 1] } }
+          });
+          map.addLayer({
+            id: "tour-end-layer",
+            type: "circle",
+            source: "tour-end",
+            paint: {
+              "circle-radius": 6,
+              "circle-color": "#111",
+              "circle-opacity": 0.85,
+              "circle-stroke-width": 2,
+              "circle-stroke-color": "#fff"
+            }
+          });
+
+          // Fit bounds
+          const bounds = lonlats.reduce(
+            (b, c) => b.extend(c),
+            new mapboxgl.LngLatBounds(lonlats[0], lonlats[0])
+          );
+          map.fitBounds(bounds, { padding: 60, duration: 0 });
+
+          // Elevation profile + hover dot
+          setupElevationProfile(points, latlngs, lonlats, map);
+        });
+      })
+      .catch(err => showError(err.message || String(err)));
+  </script>
+</body>
+</html>
