@@ -6,7 +6,10 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 18px;
+
+  /* keep it simple: one column stack */
   display: grid;
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 
@@ -15,15 +18,28 @@
    ------------------------- */
 
 .tour-nav{
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
   gap: 12px;
-  flex-wrap: wrap;
 }
+
+.tour-nav .nav-left{ justify-self: start; }
+.tour-nav .nav-center{ justify-self: center; }
+.tour-nav .nav-right{ justify-self: end; }
 
 .tour-nav a{
   text-decoration: none;
-  padding: 10px 12px;
+
+  /* border hugs text */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+
+  padding: 8px 10px;
+  line-height: 1.2;
+
   border-radius: 12px;
   border: 1px solid var(--border);
   background: rgba(255,255,255,0.08);
@@ -40,7 +56,7 @@
 
 .tour-header{
   text-align: center;
-  padding: 18px 12px;
+  padding: 10px 12px;
 }
 
 .tour-title{
@@ -64,11 +80,15 @@
   border-radius: 18px;
   overflow: hidden;
   box-shadow: var(--shadow);
+
+  /* force full-width in case something upstream makes grids */
+  width: 100%;
+  max-width: 100%;
 }
 
-.map-wrap { border-radius: 14px; overflow: hidden; }
 #map{
-  height: 3600px;
+  width: 100%;
+  height: 420px;          /* sensible default */
 }
 
 /* -------------------------
@@ -83,9 +103,7 @@
   padding: 18px;
 }
 
-.tour-content h2{
-  margin-top: 0;
-}
+.tour-content h2{ margin-top: 0; }
 
 .tour-content h2,
 .tour-content h3{
@@ -101,6 +119,22 @@
   padding-left: 18px;
 }
 
+/* -------------------------
+   Responsive
+   ------------------------- */
+
 @media (max-width: 900px){
   #map{ height: 320px; }
+
+  /* keep nav usable on small screens */
+  .tour-nav{
+    grid-template-columns: 1fr;
+    justify-items: center;
+    row-gap: 10px;
+  }
+  .tour-nav .nav-left,
+  .tour-nav .nav-center,
+  .tour-nav .nav-right{
+    justify-self: center;
+  }
 }
