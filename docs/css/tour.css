@@ -25,13 +25,15 @@
 }
 
 .tour-nav .nav-left{ justify-self: start; }
-.tour-nav .nav-center{ justify-self: center; }
+.tour-nav .nav-center{ 
+  justify-self: center;
+  text-align: center;
+}
 .tour-nav .nav-right{ justify-self: end; }
 
+/* buttons */
 .tour-nav a{
   text-decoration: none;
-
-  /* border hugs text */
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -48,6 +50,43 @@
 
 .tour-nav a:hover{
   background: rgba(255,255,255,0.14);
+}
+
+/* -------- center title -------- */
+
+.nav-title{
+  font-size: clamp(20px, 3vw, 28px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.nav-sub{
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* -------------------------
+   Mobile
+   ------------------------- */
+
+@media (max-width: 900px){
+  .tour-nav{
+    grid-template-columns: 1fr;
+    justify-items: center;
+    row-gap: 8px;
+  }
+
+  .tour-nav .nav-left,
+  .tour-nav .nav-center,
+  .tour-nav .nav-right{
+    justify-self: center;
+  }
+
+  .nav-sub{
+    white-space: normal;
+  }
 }
 
 /* -------------------------
