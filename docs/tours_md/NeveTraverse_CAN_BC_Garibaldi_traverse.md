@@ -1,9 +1,3 @@
-<!--
-Template for: NeveTraverse_CAN_BC_Garibaldi_traverse
-This file will be auto-created if missing.
-Write content only — metadata comes from tours.geojson.
--->
-
 # Overview
 This file is auto-generated and no information for this given.
 
@@ -31,15 +25,10 @@ This file is auto-generated and no information for this given.
 - This file is auto-generated and no information for this given.
 
 # Variants
-- NThis file is auto-generated and no information for this given.
+- This file is auto-generated and no information for this given.
 
 # Photos
-> Add photos by dropping images into `docs/photos/NeveTraverse_CAN_BC_Garibaldi_traverse/`.
-
-
-Optional captions:
-- `01.jpg` — TODO caption
-- `02.jpg` — TODO caption
+- This file is auto-generated and no information for this given.
 
 # References / links
 - [Avalanche Canada](https://avalanche.ca/)

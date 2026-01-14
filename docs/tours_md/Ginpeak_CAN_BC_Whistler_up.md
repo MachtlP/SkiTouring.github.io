@@ -1,9 +1,3 @@
-<!--
-Template for: Ginpeak_CAN_BC_Whistler_up
-This file will be auto-created if missing.
-Write content only — metadata comes from tours.geojson.
--->
-
 # Overview
 This file is auto-generated and no information for this given.
 
@@ -31,15 +25,10 @@ This file is auto-generated and no information for this given.
 - This file is auto-generated and no information for this given.
 
 # Variants
-- NThis file is auto-generated and no information for this given.
+- This file is auto-generated and no information for this given.
 
 # Photos
-> Add photos by dropping images into `docs/photos/Ginpeak_CAN_BC_Whistler_up/`.
-
-
-Optional captions:
-- `01.jpg` — TODO caption
-- `02.jpg` — TODO caption
+- This file is auto-generated and no information for this given.
 
 # References / links
 - [Avalanche Canada](https://avalanche.ca/)
