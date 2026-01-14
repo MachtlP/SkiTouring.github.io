@@ -81,7 +81,11 @@
     <!-- 2) nav layout -->
    <nav class="tour-nav">
   <div class="nav-left"><a href="../guide.html">← Back to guide</a></div>
-  <div class="nav-center"><strong>{{TITLE}}</strong></div>
+  <div class="nav-center">
+  <div class="nav-title">{{TITLE}}</div>
+  <div class="nav-sub">{{PROVINCE}} • {{REGION}}</div>
+</div>
+
   <div class="nav-right"><a href="{{GPX_URL}}" download class="btn">Download GPX</a></div>
 </nav>
 
@@ -100,7 +104,7 @@
   </main>
 
   <!-- IMPORTANT: token file path from tours/*.html -->
-  <script src="./js/mapbox_token.js"></script>
+  <script src="../js/mapbox_token.js"></script>
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
 
   <script>
@@ -121,7 +125,7 @@
     }
 
     if (!token) {
-      showError("MAPBOX_TOKEN not found. Check ../data/js/mapbox_token.js sets window.MAPBOX_TOKEN = 'pk...';");
+      showError("MAPBOX_TOKEN not found. Check sets window.MAPBOX_TOKEN = 'pk...';");
     }
     mapboxgl.accessToken = token || "";
 
