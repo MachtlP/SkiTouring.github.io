@@ -106,7 +106,7 @@
       { maxZoom: 19, attribution: "&copy; OpenStreetMap contributors" }
     );
 
-    openTopo.addTo(map);
+    openStreet.addTo(map);
     L.control.layers({ "Topo": openTopo, "Street": openStreet }, null, { collapsed: true }).addTo(map);
 
     // Fallback
