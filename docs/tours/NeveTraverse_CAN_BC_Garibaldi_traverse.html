@@ -14,7 +14,7 @@
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css" rel="stylesheet" />
 
   <style>
-    /* keep map full width; height is primarily controlled by tour.css (#map) */
+    /* Map area (height mostly controlled by your tour.css, but keep a sane default) */
     #map{
       width:100%;
       height:420px;
@@ -33,7 +33,6 @@
     .tour-nav .nav-center{ justify-self:center; text-align:center; }
     .tour-nav .nav-right{ justify-self:end; }
 
-    /* center title + subline */
     .nav-title{
       font-weight: 800;
       font-size: clamp(18px, 2.2vw, 28px);
@@ -45,7 +44,6 @@
       opacity: 0.85;
     }
 
-    /* buttons: border hugs text */
     .tour-nav a{
       display:inline-flex;
       align-items:center;
@@ -57,19 +55,7 @@
       text-decoration:none;
     }
 
-    /* error box */
-    .map-error{
-      margin-top:10px;
-      padding:10px 12px;
-      border:2px solid rgba(0,0,0,0.25);
-      border-radius:10px;
-      font-size:0.95rem;
-      background: rgba(255, 235, 235, 0.95);
-      display:none;
-    }
-    .map-error code { font-size: 0.9em; }
-
-    /* small map UI bar above map */
+    /* Map tools bar (toggle hillshade / 3D) */
     .map-tools{
       display:flex;
       align-items:center;
@@ -82,7 +68,7 @@
     .map-tools .tool-left{
       display:flex;
       align-items:center;
-      gap: 10px;
+      gap: 12px;
       flex-wrap: wrap;
     }
     .toggle{
@@ -94,12 +80,45 @@
       font-size: 0.95rem;
       opacity: 0.95;
     }
-    .toggle input{
-      transform: translateY(1px);
+    .toggle input{ transform: translateY(1px); }
+
+    /* Error box */
+    .map-error{
+      margin-top:10px;
+      padding:10px 12px;
+      border:2px solid rgba(0,0,0,0.25);
+      border-radius:10px;
+      font-size:0.95rem;
+      background: rgba(255, 235, 235, 0.95);
+      display:none;
     }
+    .map-error code { font-size: 0.9em; }
+
+    /* Elevation (Plotly) */
+    .elev-wrap{
+      margin-top: 12px;
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      box-shadow: var(--shadow);
+      padding: 14px;
+      overflow: hidden;
+    }
+    .elev-head{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .elev-title{ font-weight: 800; }
+    .elev-stats{ opacity: .9; font-size: .95rem; }
+    #elevPlot{ width: 100%; height: 240px; }
+    #elevNote{ display:none; opacity:.85; font-size:.95rem; margin-top: 8px; }
 
     @media (max-width: 900px){
       #map{ height: 320px; }
+      #elevPlot{ height: 220px; }
     }
   </style>
 </head>
@@ -124,16 +143,13 @@
 
     <!-- MAP -->
     <section class="tour-map">
-
-      <!-- lightweight controls ABOVE the map -->
       <div class="map-tools">
         <div class="tool-left">
-          <label class="toggle" title="Relief shading overlay (terrain gradient look)">
+          <label class="toggle" title="Relief shading overlay">
             <input id="toggleHillshade" type="checkbox" checked />
             Terrain shading
           </label>
-
-          <label class="toggle" title="Enable 3D terrain (pitch the map to see it)">
+          <label class="toggle" title="3D terrain">
             <input id="toggle3D" type="checkbox" checked />
             3D terrain
           </label>
@@ -142,6 +158,16 @@
 
       <div id="map"></div>
       <div id="mapError" class="map-error"></div>
+    </section>
+
+    <!-- Elevation profile (Plotly) -->
+    <section class="elev-wrap">
+      <div class="elev-head">
+        <div class="elev-title">Elevation profile</div>
+        <div class="elev-stats" id="elevStats">loading…</div>
+      </div>
+      <div id="elevPlot"></div>
+      <div id="elevNote">No elevation data found in this GeoJSON.</div>
     </section>
 
     <!-- CONTENT -->
@@ -195,18 +221,22 @@
   <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
 
+  <!-- Plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+
   <script>
-    const token = window.MAPBOX_TOKEN; // mapbox_token.js must set window.MAPBOX_TOKEN = "pk..."
+    // ==========================
+    // Config
+    // ==========================
+    const token = window.MAPBOX_TOKEN;
     const slug = "NeveTraverse_CAN_BC_Garibaldi_traverse";
     const detailUrl = `../data/tours_detail/${slug}.geojson`;
 
-    // match your guide.html settings if you want
     const MAP_STYLE = "mapbox://styles/mapbox/outdoors-v12";
-
-    // DEM settings
-    // For hillshade + 3D, a raster-dem source is required. :contentReference[oaicite:2]{index=2}
-    const DEM_SOURCE_URL = "mapbox://mapbox.mapbox-terrain-dem-v1"; // common DEM tileset :contentReference[oaicite:3]{index=3}
+    const DEM_SOURCE_ID = "mapbox-dem";
+    const DEM_SOURCE_URL = "mapbox://mapbox.mapbox-terrain-dem-v1";
     const TERRAIN_EXAGGERATION = 1.25;
+    const HILLSHADE_LAYER_ID = "terrain-hillshade";
 
     function htmlEscape(s) {
       return String(s)
@@ -230,8 +260,10 @@
     }
     mapboxgl.accessToken = token || "";
 
-    // GeoJSON helpers
-    function extractFirstLineCoords(gj) {
+    // ==========================
+    // GeoJSON + math helpers
+    // ==========================
+    function extractFirstLineCoordsWithEle(gj) {
       let geom = null;
       if (gj?.type === "FeatureCollection" && gj.features?.length) geom = gj.features[0]?.geometry;
       else if (gj?.type === "Feature") geom = gj.geometry;
@@ -241,13 +273,24 @@
       const coords = geom?.coordinates;
       if (!coords) return null;
 
+      // LineString: [ [lon,lat,ele?], ... ]
+      // MultiLineString: [ [ [lon,lat,ele?], ... ], ... ]
       const pts = Array.isArray(coords[0]?.[0]) ? coords.flat() : coords;
       return pts
         .filter(p => Array.isArray(p) && p.length >= 2)
-        .map(p => [Number(p[0]), Number(p[1])]);
+        .map(p => [Number(p[0]), Number(p[1]), (p.length >= 3 && Number.isFinite(Number(p[2])) ? Number(p[2]) : null)]);
     }
 
+    function haversineMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000, toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+      return 2 * R * Math.asin(Math.sqrt(a));
+    }
+
+    // ==========================
     // Map init
+    // ==========================
     const map = new mapboxgl.Map({
       container: "map",
       style: MAP_STYLE,
@@ -260,13 +303,8 @@
 
     map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
 
-    // --- Terrain / hillshade wiring ---
-    const DEM_SOURCE_ID = "mapbox-dem";
-    const HILLSHADE_LAYER_ID = "terrain-hillshade";
-
     function ensureDemSource() {
       if (map.getSource(DEM_SOURCE_ID)) return;
-
       map.addSource(DEM_SOURCE_ID, {
         type: "raster-dem",
         url: DEM_SOURCE_URL,
@@ -279,7 +317,6 @@
       ensureDemSource();
       if (enabled) {
         map.setTerrain({ source: DEM_SOURCE_ID, exaggeration: TERRAIN_EXAGGERATION });
-        // optional sky for nicer look
         if (!map.getLayer("sky")) {
           map.addLayer({
             id: "sky",
@@ -300,15 +337,12 @@
       ensureDemSource();
 
       if (!map.getLayer(HILLSHADE_LAYER_ID)) {
-        // Insert hillshade low in the stack so it behaves like a basemap overlay
-        // If you want it ABOVE certain layers, adjust beforeId.
         map.addLayer({
           id: HILLSHADE_LAYER_ID,
           type: "hillshade",
           source: DEM_SOURCE_ID,
           layout: { visibility: enabled ? "visible" : "none" },
           paint: {
-            // tune these to taste (this is what creates the “gradient/relief” feel)
             "hillshade-exaggeration": 0.6,
             "hillshade-shadow-color": "rgba(0,0,0,0.35)",
             "hillshade-highlight-color": "rgba(255,255,255,0.55)",
@@ -320,33 +354,106 @@
       }
     }
 
-    // UI toggles
     function wireToggles() {
       const hillshadeCb = document.getElementById("toggleHillshade");
       const terrainCb = document.getElementById("toggle3D");
-      if (!hillshadeCb || !terrainCb) return;
 
-      hillshadeCb.addEventListener("change", () => {
+      hillshadeCb?.addEventListener("change", () => {
         try { setHillshade(!!hillshadeCb.checked); } catch (e) { showError(String(e)); }
       });
 
-      terrainCb.addEventListener("change", () => {
+      terrainCb?.addEventListener("change", () => {
         try { set3DTerrain(!!terrainCb.checked); } catch (e) { showError(String(e)); }
       });
     }
 
-    // Load data + draw tour
+    // ==========================
+    // Elevation plot (Plotly)
+    // ==========================
+    function renderElevationPlot(pointsLonLatEle) {
+      const elevStatsEl = document.getElementById("elevStats");
+      const elevNoteEl = document.getElementById("elevNote");
+
+      const elev = pointsLonLatEle.map(p => (Number.isFinite(p[2]) ? p[2] : null));
+      const hasElev = elev.some(v => v !== null);
+
+      if (!hasElev) {
+        elevNoteEl.style.display = "block";
+        elevStatsEl.textContent = "no elevation";
+        return;
+      }
+
+      const distKm = new Array(pointsLonLatEle.length).fill(0);
+      for (let i = 1; i < pointsLonLatEle.length; i++) {
+        distKm[i] =
+          distKm[i-1] +
+          haversineMeters(
+            pointsLonLatEle[i-1][1], pointsLonLatEle[i-1][0],
+            pointsLonLatEle[i][1],   pointsLonLatEle[i][0]
+          ) / 1000;
+      }
+
+      const elevVals = elev.filter(v => v !== null);
+      const minE = Math.min(...elevVals);
+      const maxE = Math.max(...elevVals);
+
+      let gain = 0, loss = 0;
+      for (let i = 1; i < elev.length; i++) {
+        if (elev[i] === null || elev[i-1] === null) continue;
+        const de = elev[i] - elev[i-1];
+        if (de > 0) gain += de; else loss += -de;
+      }
+
+      elevStatsEl.textContent =
+        `${distKm[distKm.length-1].toFixed(1)} km • ↑ ${Math.round(gain)} m • ↓ ${Math.round(loss)} m • ${Math.round(minE)}–${Math.round(maxE)} m`;
+
+      const trace = {
+        x: distKm,
+        y: elev,
+        type: "scatter",
+        mode: "lines",
+        line: { width: 3 },
+        hovertemplate: "%{x:.2f} km<br>%{y:.0f} m<extra></extra>"
+      };
+
+      const layout = {
+        margin: { l: 50, r: 12, t: 6, b: 36 },
+        xaxis: { title: "Distance (km)" },
+        yaxis: { title: "Elevation (m)" },
+        dragmode: "pan",
+        hovermode: "x",
+        paper_bgcolor: "rgba(0,0,0,0)",
+        plot_bgcolor: "rgba(0,0,0,0)"
+      };
+
+      const config = {
+        displayModeBar: false,
+        responsive: true,
+        scrollZoom: true
+      };
+
+      Plotly.newPlot("elevPlot", [trace], layout, config);
+    }
+
+    // ==========================
+    // Load data, draw line, fit bounds, plot
+    // ==========================
     fetch(detailUrl)
       .then(r => {
         if (!r.ok) throw new Error(`Failed to load GeoJSON (${r.status})`);
         return r.json();
       })
       .then(gj => {
-        const lineCoords = extractFirstLineCoords(gj);
-        if (!lineCoords || lineCoords.length < 2) throw new Error("Not enough coordinates to draw.");
+        const pts = extractFirstLineCoordsWithEle(gj);
+        if (!pts || pts.length < 2) throw new Error("Not enough coordinates to draw.");
+
+        const lineCoords = pts
+          .map(p => [p[0], p[1]])
+          .filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+
+        if (lineCoords.length < 2) throw new Error(`Not enough coordinate points (${lineCoords.length}).`);
 
         map.on("load", () => {
-          // enable both by default
           setHillshade(true);
           set3DTerrain(true);
           wireToggles();
@@ -401,6 +508,9 @@
             new mapboxgl.LngLatBounds(lineCoords[0], lineCoords[0])
           );
           map.fitBounds(bounds, { padding: 60, duration: 0 });
+
+          // restore elevation plot
+          renderElevationPlot(pts);
         });
       })
       .catch(err => showError(err.message || String(err)));
