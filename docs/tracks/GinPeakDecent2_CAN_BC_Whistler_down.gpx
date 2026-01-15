@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx creator="Garmin Connect" version="1.1"
+  xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/11.xsd"
+  xmlns:ns3="http://www.garmin.com/xmlschemas/TrackPointExtension/v1"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ns2="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+  <metadata>
+    <name>GinPeak_down1</name>
+    <link href="connect.garmin.com">
+      <text>Garmin Connect</text>
+    </link>
+    <time>2026-01-15T03:40:46.000Z</time>
+  </metadata>
+  <trk>
+    <name>GinPeak_down1</name>
+    <trkseg>
+      <trkpt lat="50.14695885591209" lon="-123.06927680969238">
+        <ele>1765.52</ele>
+      </trkpt>
+      <trkpt lat="50.14724526554346" lon="-123.06947940029204">
+        <ele>1756.92</ele>
+      </trkpt>
+      <trkpt lat="50.147531758993864" lon="-123.06968207471073">
+        <ele>1746.58</ele>
+      </trkpt>
+      <trkpt lat="50.147818168625236" lon="-123.06988474912941">
+        <ele>1734.31</ele>
+      </trkpt>
+      <trkpt lat="50.14810457825661" lon="-123.07008733972907">
+        <ele>1719.59</ele>
+      </trkpt>
+      <trkpt lat="50.14839107170701" lon="-123.07029001414776">
+        <ele>1702.87</ele>
+      </trkpt>
+      <trkpt lat="50.14867748133838" lon="-123.07049268856645">
+        <ele>1685.21</ele>
+      </trkpt>
+      <trkpt lat="50.148963974788785" lon="-123.0706952791661">
+        <ele>1666.74</ele>
+      </trkpt>
+      <trkpt lat="50.14902139082551" lon="-123.07073593139648">
+        <ele>1650.13</ele>
+      </trkpt>
+      <trkpt lat="50.149139827117324" lon="-123.07118955999613">
+        <ele>1631.99</ele>
+      </trkpt>
+      <trkpt lat="50.14925826340914" lon="-123.0716432724148">
+        <ele>1614.86</ele>
+      </trkpt>
+      <trkpt lat="50.14937669970095" lon="-123.07209690101445">
+        <ele>1598.98</ele>
+      </trkpt>
+      <trkpt lat="50.149495135992765" lon="-123.07255061343312">
+        <ele>1584.37</ele>
+      </trkpt>
+      <trkpt lat="50.14961357228458" lon="-123.07300424203277">
+        <ele>1572.25</ele>
+      </trkpt>
+      <trkpt lat="50.1496263127774" lon="-123.07305335998535">
+        <ele>1563.3</ele>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
