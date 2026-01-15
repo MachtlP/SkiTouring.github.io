@@ -6,7 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Mapbox GL JS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css" rel="stylesheet" />
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css"
+    rel="stylesheet"
+  />
 
   <!-- Your styles -->
   <link rel="stylesheet" href="./css/base.css" />
@@ -15,14 +18,24 @@
   <link rel="stylesheet" href="./css/map.css" />
 
   <style>
-    /* Make sure Mapbox fills your existing map container */
-    #map { width: 100%; height: 100%; }
+    /* Ensure map fills the page area */
+    main {
+      display: block;
+    }
 
-    /* If your .mapwrap/#map-section is not giving height, Mapbox will render “blank”.
-       Usually you already handle this in map.css, but this is a safe fallback. */
-    .mapwrap { min-height: 520px; }
-    @media (max-width: 900px){
-      .mapwrap { min-height: 380px; }
+    #map-section {
+      padding: 0 18px 18px;
+    }
+
+    #map {
+      width: 100%;
+      height: 520px;
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    @media (max-width: 900px) {
+      #map { height: 380px; }
     }
   </style>
 </head>
@@ -43,17 +56,16 @@
       </div>
 
       <h2 class="hero-title">Ski Touring Guide</h2>
+
       <p class="hero-sub">
         This map-linked ski touring guide brings together GPX tracks, photos, and practical notes in one place.
-        I created it after finding it surprisingly difficult to locate concise, route-specific GPX information without endlessly scrolling through scattered trip reports.
-        These routes reflect personal experiences and are not guaranteed to represent the best or safest approach under all conditions.
-        Cheers Machtl
+        These routes reflect personal experiences and are not guaranteed to represent the best or safest approach
+        under all conditions.
         <br><br>
         <b>Always assess current local conditions and consult the avalanche forecast before heading out.</b>
       </p>
 
       <div class="hero-cta">
-        <button class="hero-btn primary" id="ctaBrowse" type="button">Browse the book</button>
         <button class="hero-btn" id="ctaMap" type="button">Jump to map</button>
       </div>
     </div>
@@ -64,11 +76,12 @@
     <div class="topbar">
       <div class="brand">
         <h1>Ski Touring Guide</h1>
-        <p>Scan the book • click the map • open tours in a new tab</p>
+        <p>Filter tours • click the map • open tours in a new tab</p>
       </div>
 
       <div class="controls">
         <input id="q" placeholder="Search title / region…" />
+
         <select id="province">
           <option value="">All provinces</option>
         </select>
@@ -82,39 +95,27 @@
     </div>
   </header>
 
-  <!-- Main split -->
+  <!-- Map only -->
   <main>
-    <section class="book">
-      <div class="bookhead">
-        <div><strong>Guidebook</strong></div>
-        <div class="count" id="count">Loading…</div>
-      </div>
-      <div class="grid" id="grid"></div>
-    </section>
-
     <section class="mapwrap" id="map-section">
-      <div class="maphead">
-        <div><strong>Map</strong></div>
-        <div class="count">Click a line or marker → open tour</div>
-      </div>
       <div id="map"></div>
     </section>
   </main>
 
-  <!-- Token (guide.html is in docs root → ./js/...) -->
+  <!-- Token -->
   <script src="./js/mapbox_token.js"></script>
 
   <!-- Mapbox GL JS -->
   <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
 
-  <!-- Your Mapbox-based main script (replace Leaflet one) -->
+  <!-- Mapbox-based logic -->
   <script src="./js/main_mapbox.js"></script>
 
-  <!-- Optional: tiny safety check -->
+  <!-- Scroll helper -->
   <script>
-    if (!window.MAPBOX_TOKEN) {
-      console.warn("MAPBOX_TOKEN missing. Check ./js/mapbox_token.js sets window.MAPBOX_TOKEN = 'pk...';");
-    }
+    document.getElementById("ctaMap")?.addEventListener("click", () => {
+      document.getElementById("map-section")?.scrollIntoView({ behavior: "smooth" });
+    });
   </script>
 </body>
 </html>
