@@ -2,396 +2,119 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Ski Touring Guide – 3D Map</title>
+  <title>Machtls Touring Guide</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <!-- Mapbox GL JS -->
-  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet">
-  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.css" rel="stylesheet" />
 
-  <!-- Optional base styles -->
+  <!-- Your styles -->
   <link rel="stylesheet" href="./css/base.css" />
+  <link rel="stylesheet" href="./css/hero.css" />
+  <link rel="stylesheet" href="./css/book.css" />
+  <link rel="stylesheet" href="./css/map.css" />
 
   <style>
-    body { margin: 0; }
-    header{
-      position: sticky; top: 0; z-index: 10;
-      background:#fff;
-      border-bottom:1px solid rgba(0,0,0,0.12);
-      padding: 10px 12px;
-    }
-    .bar{
-      display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;
-    }
-    .title{ font-weight: 800; }
-    .hint{ opacity:0.8; font-size:0.95rem; }
-    .controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .controls button{
-      border:1px solid rgba(0,0,0,0.18);
-      background:#fff;
-      padding:8px 10px;
-      border-radius:10px;
-      cursor:pointer;
-      font-weight:700;
-    }
-    .controls input[type="range"]{ width: 140px; }
+    /* Make sure Mapbox fills your existing map container */
+    #map { width: 100%; height: 100%; }
 
-    #map { height: 72vh; width: 100%; }
-
-    .loading{
-      position: fixed;
-      left: 12px; bottom: 12px;
-      background: rgba(255,255,255,0.95);
-      border: 1px solid rgba(0,0,0,0.18);
-      border-radius: 12px;
-      padding: 8px 10px;
-      font-size: 0.95rem;
-      z-index: 20;
-    }
-
-    /* Lightweight ToC */
-    .toc{
-      padding: 14px 12px 24px;
-      border-top: 1px solid rgba(0,0,0,0.10);
-      background:#fff;
-    }
-    .toc h2{
-      margin: 0 0 10px;
-      font-size: 1.05rem;
-      letter-spacing: 0.2px;
-    }
-    .toc small{ opacity:0.75; }
-
-    details.prov{
-      border:1px solid rgba(0,0,0,0.12);
-      border-radius:12px;
-      margin:10px 0;
-      overflow:hidden;
-      background:#fff;
-    }
-    details.prov > summary{
-      cursor:pointer;
-      list-style:none;
-      padding:10px 12px;
-      display:flex;
-      align-items:baseline;
-      justify-content:space-between;
-      gap:10px;
-      font-weight:800;
-      user-select:none;
-    }
-    details.prov > summary::-webkit-details-marker{ display:none; }
-    .prov-meta{
-      font-weight:600;
-      opacity:0.75;
-      font-size:0.9rem;
-      white-space:nowrap;
-    }
-    .prov-list{ padding: 0 8px 10px; }
-    .prov-list a{
-      display:block;
-      padding:8px 10px;
-      border-radius:10px;
-      text-decoration:none;
-      color:inherit;
-      border:1px solid transparent;
-    }
-    .prov-list a:hover{
-      border-color: rgba(0,0,0,0.10);
-      background: rgba(0,0,0,0.03);
-    }
-    .tour-sub{
-      display:block;
-      font-size:0.9rem;
-      opacity:0.75;
-      margin-top:2px;
+    /* If your .mapwrap/#map-section is not giving height, Mapbox will render “blank”.
+       Usually you already handle this in map.css, but this is a safe fallback. */
+    .mapwrap { min-height: 520px; }
+    @media (max-width: 900px){
+      .mapwrap { min-height: 380px; }
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <div class="bar">
-      <div>
-        <div class="title">Ski Touring Guide – 3D Terrain</div>
-        <div class="hint">Drag to rotate • scroll to zoom • click a line → open tour</div>
+  <!-- Cover-page hero -->
+  <section class="hero hero--guide" aria-label="Guidebook intro">
+    <div class="hero-media">
+      <img src="./assets/cover.jpg" alt="Touring Guide Cover">
+    </div>
+
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="dot"></span>
+        <span>Ski Touring Guide</span>
+        <span class="sep">•</span>
+        <span>Winter 2025/26</span>
       </div>
+
+      <h2 class="hero-title">Ski Touring Guide</h2>
+      <p class="hero-sub">
+        This map-linked ski touring guide brings together GPX tracks, photos, and practical notes in one place.
+        I created it after finding it surprisingly difficult to locate concise, route-specific GPX information without endlessly scrolling through scattered trip reports.
+        These routes reflect personal experiences and are not guaranteed to represent the best or safest approach under all conditions.
+        Cheers Machtl
+        <br><br>
+        <b>Always assess current local conditions and consult the avalanche forecast before heading out.</b>
+      </p>
+
+      <div class="hero-cta">
+        <button class="hero-btn primary" id="ctaBrowse" type="button">Browse the book</button>
+        <button class="hero-btn" id="ctaMap" type="button">Jump to map</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Header / filters -->
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <h1>Ski Touring Guide</h1>
+        <p>Scan the book • click the map • open tours in a new tab</p>
+      </div>
+
       <div class="controls">
-        <button id="fit" type="button">Fit to tours</button>
-        <button id="jumpToc" type="button">Table of contents ↓</button>
-        <label style="display:flex;gap:8px;align-items:center;">
-          <span style="opacity:.8;font-weight:700;">Terrain</span>
-          <input id="exag" type="range" min="0" max="2.5" step="0.1" value="1.2" />
-        </label>
+        <input id="q" placeholder="Search title / region…" />
+        <select id="province">
+          <option value="">All provinces</option>
+        </select>
+
+        <select id="region">
+          <option value="">All regions</option>
+        </select>
+
+        <button id="fit" type="button">Fit map to results</button>
       </div>
     </div>
   </header>
 
-  <div id="map"></div>
-  <div class="loading" id="loading">Loading map…</div>
+  <!-- Main split -->
+  <main>
+    <section class="book">
+      <div class="bookhead">
+        <div><strong>Guidebook</strong></div>
+        <div class="count" id="count">Loading…</div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
 
-  <section class="toc" id="toc">
-    <h2>Table of contents <small>(by province)</small></h2>
-    <div id="tocRoot"></div>
-  </section>
+    <section class="mapwrap" id="map-section">
+      <div class="maphead">
+        <div><strong>Map</strong></div>
+        <div class="count">Click a line or marker → open tour</div>
+      </div>
+      <div id="map"></div>
+    </section>
+  </main>
 
-  <!-- Load token from separate file -->
+  <!-- Token (guide.html is in docs root → ./js/...) -->
   <script src="./js/mapbox_token.js"></script>
 
+  <!-- Mapbox GL JS -->
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.5.0/mapbox-gl.js"></script>
+
+  <!-- Your Mapbox-based main script (replace Leaflet one) -->
+  <script src="./js/main_mapbox.js"></script>
+
+  <!-- Optional: tiny safety check -->
   <script>
-    const GEOJSON_URL = "./data/tours.geojson";
-
-    function setLoading(text, show=true){
-      const el = document.getElementById("loading");
-      if (!el) return;
-      el.textContent = text;
-      el.style.display = show ? "block" : "none";
+    if (!window.MAPBOX_TOKEN) {
+      console.warn("MAPBOX_TOKEN missing. Check ./js/mapbox_token.js sets window.MAPBOX_TOKEN = 'pk...';");
     }
-
-    function escapeHtml(s){
-      return String(s ?? "")
-        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
-    }
-
-    // ---- Mapbox token ----
-    const token = window.MAPBOX_TOKEN;
-    if (!token || String(token).includes("PASTE_YOUR_TOKEN")) {
-      alert("Missing Mapbox token. Create docs/js/mapbox_token.js and set window.MAPBOX_TOKEN.");
-      throw new Error("Missing Mapbox token");
-    }
-    mapboxgl.accessToken = token;
-
-    // ---- Map init (outdoors style + 3D terrain) ----
-    const map = new mapboxgl.Map({
-      container: "map",
-      style: "mapbox://styles/mapbox/outdoors-v12",
-      center: [-123.0, 50.0],
-      zoom: 6.8,
-      pitch: 60,
-      bearing: -20,
-      antialias: true
-    });
-
-    map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), "top-right");
-
-    let toursData = null;
-    let toursBounds = null;
-
-    function computeBoundsFromGeoJSON(gj){
-      let minX= 180, minY=  90, maxX=-180, maxY=-90;
-      const feats = gj?.features || [];
-      for (const f of feats){
-        const g = f?.geometry;
-        if (!g) continue;
-        const t = g.type;
-        const coords = g.coordinates;
-        if (!coords) continue;
-
-        const scan = (arr) => {
-          if (!Array.isArray(arr) || !arr.length) return;
-          if (typeof arr[0] === "number" && typeof arr[1] === "number") {
-            const x = Number(arr[0]), y = Number(arr[1]);
-            if (isFinite(x) && isFinite(y)) {
-              if (x < minX) minX = x; if (x > maxX) maxX = x;
-              if (y < minY) minY = y; if (y > maxY) maxY = y;
-            }
-            return;
-          }
-          for (const a of arr) scan(a);
-        };
-
-        if (t === "LineString" || t === "MultiLineString") scan(coords);
-      }
-
-      if (minX > maxX || minY > maxY) return null;
-      return [[minX, minY], [maxX, maxY]];
-    }
-
-    function renderTOC(gj){
-      const tocRoot = document.getElementById("tocRoot");
-      if (!tocRoot) return;
-
-      const feats = (gj?.features || []).filter(f => {
-        const t = f?.geometry?.type;
-        return t === "LineString" || t === "MultiLineString";
-      });
-
-      const byProv = new Map();
-      for (const f of feats){
-        const p = f?.properties || {};
-        const prov = (p.province || p.province_code || "Other").toString();
-        if (!byProv.has(prov)) byProv.set(prov, []);
-        byProv.get(prov).push(p);
-      }
-
-      const provKeys = Array.from(byProv.keys()).sort((a,b) => a.localeCompare(b));
-      let html = "";
-
-      for (const prov of provKeys){
-        const arr = byProv.get(prov) || [];
-        arr.sort((a,b) => String(a.title||a.slug||"").localeCompare(String(b.title||b.slug||"")));
-        const count = arr.length;
-
-        html += `
-          <details class="prov">
-            <summary>
-              <span>${escapeHtml(prov)}</span>
-              <span class="prov-meta">${count} tour${count===1?"":"s"}</span>
-            </summary>
-            <div class="prov-list">
-        `;
-
-        for (const p of arr){
-          const title = p.title || p.slug || "Tour";
-          const page  = p.page || p.url || "";
-          const region = p.region ? ` • ${p.region}` : "";
-          const dir = p.direction ? ` • ${p.direction}` : "";
-          const meta = `${region}${dir}`.trim();
-
-          if (page){
-            html += `
-              <a href="${escapeHtml(page)}" target="_blank" rel="noopener">
-                ${escapeHtml(title)}
-                ${meta ? `<span class="tour-sub">${escapeHtml(meta.replace(/^ • /,""))}</span>` : ""}
-              </a>
-            `;
-          } else {
-            html += `
-              <a href="javascript:void(0)" aria-disabled="true">
-                ${escapeHtml(title)}
-                ${meta ? `<span class="tour-sub">${escapeHtml(meta.replace(/^ • /,""))}</span>` : ""}
-              </a>
-            `;
-          }
-        }
-
-        html += `</div></details>`;
-      }
-
-      tocRoot.innerHTML = html;
-    }
-
-    async function loadTours(){
-      setLoading("Loading tours…");
-      const gj = await fetch(GEOJSON_URL, { cache: "force-cache" }).then(r => {
-        if (!r.ok) throw new Error(`Failed to load ${GEOJSON_URL} (${r.status})`);
-        return r.json();
-      });
-      toursData = gj;
-      toursBounds = computeBoundsFromGeoJSON(gj);
-
-      map.addSource("tours", { type: "geojson", data: gj });
-
-      // Line layer (color by direction)
-      map.addLayer({
-        id: "tours-line",
-        type: "line",
-        source: "tours",
-        layout: {
-          "line-join": "round",
-          "line-cap": "round"
-        },
-        paint: {
-          "line-width": 3,
-          "line-opacity": 0.95,
-          "line-color": [
-            "match",
-            ["downcase", ["coalesce", ["get","direction"], ""]],
-            "up", "#1f6feb",
-            "down", "#b64a4a",
-            "traverse", "#b000b5",
-            "loop", "#1f6feb",
-            "#1f6feb"
-          ]
-        }
-      });
-
-      // Slightly thicker line on hover
-      map.addLayer({
-        id: "tours-hover",
-        type: "line",
-        source: "tours",
-        filter: ["==", ["id"], ""],
-        layout: { "line-join":"round", "line-cap":"round" },
-        paint: { "line-width": 6, "line-opacity": 0.25 }
-      });
-
-      // Interactions
-      map.on("mouseenter", "tours-line", () => map.getCanvas().style.cursor = "pointer");
-      map.on("mouseleave", "tours-line", () => {
-        map.getCanvas().style.cursor = "";
-        map.setFilter("tours-hover", ["==", ["id"], ""]);
-      });
-
-      map.on("mousemove", "tours-line", (e) => {
-        const f = e.features?.[0];
-        if (!f) return;
-
-        // Use slug as a stable hover key if present, else fallback
-        const slug = f.properties?.slug || f.properties?.title || "";
-        map.setFilter("tours-hover", ["==", ["get","slug"], slug]);
-      });
-
-      map.on("click", "tours-line", (e) => {
-        const p = e.features?.[0]?.properties || {};
-        const page = p.page || p.url || "";
-        if (page) window.open(page, "_blank");
-      });
-
-      // Fit to tours
-      if (toursBounds) {
-        map.fitBounds(toursBounds, { padding: 60, duration: 0 });
-      }
-
-      // Render ToC lazily
-      if ("requestIdleCallback" in window) {
-        requestIdleCallback(() => renderTOC(gj), { timeout: 1500 });
-      } else {
-        setTimeout(() => renderTOC(gj), 50);
-      }
-
-      setLoading("Loaded.", false);
-    }
-
-    map.on("load", async () => {
-      // 3D terrain
-      map.addSource("mapbox-dem", {
-        type: "raster-dem",
-        url: "mapbox://mapbox.terrain-rgb",
-        tileSize: 512,
-        maxzoom: 14
-      });
-
-      map.setTerrain({ source: "mapbox-dem", exaggeration: 1.2 });
-
-      // Optional: sky for nicer 3D look
-      map.addLayer({
-        id: "sky",
-        type: "sky",
-        paint: {
-          "sky-type": "atmosphere",
-          "sky-atmosphere-sun-intensity": 10
-        }
-      });
-
-      await loadTours();
-    });
-
-    // Controls
-    document.getElementById("fit")?.addEventListener("click", () => {
-      if (!toursBounds) return;
-      map.fitBounds(toursBounds, { padding: 60, duration: 800 });
-    });
-
-    document.getElementById("jumpToc")?.addEventListener("click", () => {
-      document.getElementById("toc")?.scrollIntoView({ behavior: "smooth" });
-    });
-
-    document.getElementById("exag")?.addEventListener("input", (e) => {
-      const v = Number(e.target.value);
-      try { map.setTerrain({ source: "mapbox-dem", exaggeration: v }); } catch (_) {}
-    });
   </script>
 </body>
 </html>
