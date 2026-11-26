@@ -4,12 +4,22 @@
    Middle: text (clean, no panel) just below title
    Bottom: CTA + note (bottom)
    ========================= */
+:root{
+  /* single source of truth for cover width */
+  --cover-max: 960px;
+  --cover-pad: 18px;
+}
 
 .hero{
   position: relative;
   border-radius: 22px;
   overflow: visible;
+
+  /* 🔑 constrain the whole component to the cover width */
+  width: min(var(--cover-max), calc(100vw - (var(--cover-pad) * 2)));
+  margin: 0 auto;
 }
+
 
 /* =========================
    IMAGE / COVER
@@ -22,7 +32,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
-
+  width: 100%;
   background:
     radial-gradient(900px 600px at 50% 45%, rgba(255,255,255,0.06), rgba(0,0,0,0.35)),
     linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25));
